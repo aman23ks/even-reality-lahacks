@@ -116,9 +116,9 @@ export class EventManager {
         return 'double_tap'
       case OsEventTypeList.LONG_PRESS_EVENT:
         return 'long_press'
-      case OsEventTypeList.SLIDE_FORWARD_EVENT:
+      case OsEventTypeList.SCROLL_TOP_EVENT:
         return 'swipe_forward'
-      case OsEventTypeList.SLIDE_BACKWARD_EVENT:
+      case OsEventTypeList.SCROLL_BOTTOM_EVENT:
         return 'swipe_backward'
       default:
         return 'unknown'

@@ -9,8 +9,8 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\"",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "package": "npm run build && evenhub pack",
-    "sim": "evenhub sim"
+    "package": "npm run build && evenhub pack app.json dist -o g2-app.ehpk",
+    "qr": "evenhub qr -u http://192.168.13.91:5173"
   },
   "dependencies": {
     "@evenrealities/even_hub_sdk": "latest",
@@ -19,6 +19,7 @@
     "express": "^4.21.0"
   },
   "devDependencies": {
+    "@evenrealities/evenhub-cli": "^0.1.14",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^22.5.0",

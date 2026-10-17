@@ -22,7 +22,7 @@ import {
   TextContainerUpgrade,
   CreateStartUpPageContainer,
   ImageContainerProperty,
-  CreatePageContainer,
+  RebuildPageContainer,
 } from '@evenrealities/even_hub_sdk'
 
 /** Display constants for the G2 */
@@ -41,19 +41,18 @@ export interface TextConfig {
   width?: number
   height?: number
   interactive?: boolean
-  fontSize?: number
+  textColor?: number // 0~4 brightness
 }
 
 /** A simplified image container config */
 export interface ImageConfig {
   id: number
   name: string
-  imageData: string  // base64 encoded greyscale image
   x?: number
   y?: number
   width?: number
   height?: number
-  interactive?: boolean
+  zOrderIndex?: number
 }
 
 /**
@@ -84,7 +83,7 @@ export class DisplayManager {
       containerName: config.name,
       content: config.content,
       isEventCapture: config.interactive ? 1 : 0,
-      fontSize: config.fontSize,
+      textColor: config.textColor ?? 4,
     })
   }
 
@@ -95,13 +94,9 @@ export class DisplayManager {
       yPosition: config.y ?? 0,
       width: config.width ?? G2_DISPLAY.WIDTH,
       height: config.height ?? G2_DISPLAY.HEIGHT,
-      borderWidth: 0,
-      borderColor: 5,
-      paddingLength: 0,
       containerID: config.id,
       containerName: config.name,
-      content: config.imageData,
-      isEventCapture: config.interactive ? 1 : 0,
+      zOrderIndex: config.zOrderIndex ?? 0,
     })
   }
 
@@ -128,26 +123,27 @@ export class DisplayManager {
     return result
   }
 
-  /** Render a new page (navigates away from current page) */
+  /** Render a new page / update page layout using rebuildPageContainer */
   async showPage(
     textContainers: TextContainerProperty[] = [],
     imageContainers: ImageContainerProperty[] = [],
   ): Promise<number> {
     const totalContainers = textContainers.length + imageContainers.length
 
-    const result = await this.bridge.createPageContainer(
-      new CreatePageContainer({
+    const success = await this.bridge.rebuildPageContainer(
+      new RebuildPageContainer({
         containerTotalNum: totalContainers,
         textObject: textContainers.length > 0 ? textContainers : undefined,
         imageObject: imageContainers.length > 0 ? imageContainers : undefined,
       })
     )
 
-    if (result !== 0) {
-      console.error('createPageContainer failed:', result)
+    if (!success) {
+      console.error('rebuildPageContainer failed')
+      return 1
     }
 
-    return result
+    return 0
   }
 
   /** Update text in an existing container without re-rendering the full page */
@@ -168,8 +164,8 @@ export class DisplayManager {
     this.bridge.shutDownPageContainer(mode)
   }
 
-  /** Navigate back to previous page */
+  /** Navigate back or shutdown page container */
   goBack(): void {
-    this.bridge.backPageContainer()
+    this.bridge.shutDownPageContainer(1)
   }
 }

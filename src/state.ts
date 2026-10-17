@@ -23,7 +23,7 @@ export interface AppState {
  * 
  * Usage:
  *   const state = new StateManager()
- *   state.onChange((newState) => { /* update display */ })
+ *   state.onChange((newState) => { ... })
  *   state.update({ tapCount: state.get().tapCount + 1 })
  */
 export class StateManager {
