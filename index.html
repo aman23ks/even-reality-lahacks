@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Even Reality G2 App</title>
+  </head>
+  <body>
+    <!-- 
+      The phone WebView renders this page.
+      The G2 glasses only see SDK containers (text, image, list) — 
+      they do NOT render this HTML.
+      
+      This page is the "control plane" that runs your app logic
+      and sends display commands to the glasses via the SDK bridge.
+    -->
+    <div id="app">
+      <p style="font-family: monospace; padding: 20px; color: #666;">
+        Even Reality G2 App — Running in WebView
+      </p>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

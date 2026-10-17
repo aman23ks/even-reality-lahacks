@@ -1,0 +1,13 @@
+{
+  "name": "Even Reality G2 App",
+  "version": "1.0.0",
+  "description": "LA Hacks 2026 — Even Reality G2 hackathon project",
+  "entry": "index.html",
+  "icon": "icon.png",
+  "network": [
+    "https://*.example.com",
+    "http://localhost:*",
+    "https://api.openai.com",
+    "https://generativelanguage.googleapis.com"
+  ]
+}

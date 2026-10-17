@@ -1,0 +1,30 @@
+{
+  "name": "even-reality-g2-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:backend": "tsx watch server/index.ts",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\"",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "package": "npm run build && evenhub pack",
+    "sim": "evenhub sim"
+  },
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "latest",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.5.0",
+    "concurrently": "^9.0.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  }
+}
