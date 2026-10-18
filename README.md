@@ -24,6 +24,8 @@ listen (your voice only) → notice a sustained spiral → nudge on the lens →
 | **Recovery** | A reset only counts as a recovery when your mood actually clears afterwards. The bounce-back time is recorded. |
 | **Evolution** | Egg → Sprout → Wisp (3) → Guardian (8) → Zenith (15 recoveries) |
 | **Learns what calms you** | Offers the resets that have worked for you most often first. |
+| **Post-conversation debrief** | When the glasses hear you *and* someone else, AuraPet holds every nudge (nobody talks to their glasses mid-argument). When everyone goes quiet and it got tense, it offers: *"That got tense. Tap when you're free for 30 seconds."* Calm conversations get nothing. |
+| **Judge mode** | A guided 2-minute run for first-time wearers: the lens says what to say, one stressed sentence nudges, and Mochi reaches Zenith in 3 bounce-backs. On by default in the judging build. |
 | **Slow-down whisper** | If you're talking much faster and louder than your usual, `slow down...` fades in on the lens. |
 | **Safety pause** | If something you say sounds really heavy, the game pauses and gently suggests reaching out to someone you trust. |
 | **Lens mirror** | `/mirror.html` shows exactly what the wearer sees, live, for the projector. |

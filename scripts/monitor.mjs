@@ -94,7 +94,7 @@ function handle(r) {
     if (e.kind === 'voice_check_done')
       once(inst, `vc@${e.t}`, () => say('🎚 ', G, `voice check done — your threshold ${e.detail?.threshold?.toFixed?.(2) ?? e.detail?.threshold} (samples ${JSON.stringify(e.detail?.samples)})`))
   }
-  const milestones = { hatched: '🥚 hatched!', voice_check_start: '🎚  voice check started', nudge: '⛈  nudge shown', reset_complete: '🌸 reset verified → bloom', recovered: '☀️  recovery counted', crisis_screen: '💚 support screen shown' }
+  const milestones = { convo_start: '🗣  conversation detected (nudges held)', convo_end: '🤫 conversation ended', debrief: '⛈  debrief offered after the conversation', judge_demo_start: '🎬 judge demo started', hatched: '🥚 hatched!', voice_check_start: '🎚  voice check started', nudge: '⛈  nudge shown', reset_complete: '🌸 reset verified → bloom', recovered: '☀️  recovery counted', crisis_screen: '💚 support screen shown' }
   for (const e of r.events || []) {
     if (milestones[e.kind]) once(inst, `${e.kind}@${e.t}`, () => say('', G, milestones[e.kind]))
     if (e.kind === 'lifecycle') once(inst, `life@${e.t}`, () => say('·', D, `glasses: ${e.detail}`))

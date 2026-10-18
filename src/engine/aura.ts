@@ -48,6 +48,7 @@ export interface AuraSnapshot {
   lastEmotion: string
   whisperActive: boolean
   backendStt: boolean
+  inConversation: boolean
 }
 
 const MAX_BASELINE = 40
@@ -71,6 +72,15 @@ export class Aura {
   private checking = false
   private ambientShowUntil = 0
   private lastWeather = ''
+  /**
+   * Post-conversation debrief. When the glasses hear both the wearer and someone else, we're in a
+   * conversation: nudges are held (nobody talks to their glasses mid-argument) while tension is tracked.
+   * When everyone goes quiet, a tense conversation gets one gentle "that got tense" offer.
+   */
+  private convo: { startedAt: number; lastSpeechAt: number; tense: number; storm: number; fog: number } | null = null
+  private lastSelfAt = 0
+  private lastOtherAt = 0
+  private debrief = false
 
   private mood: MoodEngine
   private pending: { kind: 'storm' | 'fog'; since: number } | null = null
@@ -105,7 +115,8 @@ export class Aura {
     segmenter.onUtterance((u) => void this.onUtterance(u))
     segmenter.onSpeechStart(() => this.onSpeechStart())
     segmenter.onOtherSpeaker(() => {
-      this.hud.caption = 'Someone else is talking - ignored'
+      this.hud.caption = 'Someone else is talking - not counted'
+      this.noteSpeech('other')
       this.changed()
     })
     setInterval(() => this.tick(), 250)
@@ -166,6 +177,7 @@ export class Aura {
       pending: Boolean(this.pending),
       active: a ? { id: a.id, title: RESETS[a.id].title, progress: a.progress, message: a.message } : null,
       watching: Boolean(this.watch),
+      inConversation: Boolean(this.convo),
       lastTranscript: this.lastTranscript,
       lastLabel: this.lastLabel,
       lastEmotion: this.lastEmotion,
@@ -178,6 +190,7 @@ export class Aura {
 
   private async onUtterance(u: Utterance): Promise<void> {
     this.lastUtt = u
+    this.noteSpeech('self')
     if (this.phase === 'voicecheck') {
       this.recordVoiceSample(u)
       return
@@ -220,6 +233,14 @@ export class Aura {
   async submitText(text: string, fromSpeechApi = false): Promise<void> {
     const trimmed = text.trim()
     if (!trimmed) return
+    // Test hook for browsers (no speaker tags): "them: ..." plays the other person in a conversation
+    if (!fromSpeechApi && /^them:/i.test(trimmed)) {
+      this.hud.caption = `Someone else: "${trimmed.slice(5).trim().slice(0, 60)}" - not counted`
+      this.noteSpeech('other')
+      this.changed()
+      return
+    }
+    if (!fromSpeechApi) this.noteSpeech('self')
     // Speech-API text comes from the phone mic: only trust it if the wearer just spoke (speaker gate)
     const utt = this.lastUtt && Date.now() - this.lastUtt.endedAt < 6000 ? this.lastUtt : null
     if (fromSpeechApi && this.glasses.connected && !utt) {
@@ -281,6 +302,11 @@ export class Aura {
     }
 
     if (countsForMood) this.mood.add(c, now)
+    if (countsForMood && this.convo && c.label !== 'clear' && c.intensity >= (this.timings().negativeIntensity ?? 0.45)) {
+      this.convo.tense++
+      if (c.label === 'storm') this.convo.storm++
+      else this.convo.fog++
+    }
 
     // Sunlight: joyful/calm moments make the pet glow (looks only, never evolution)
     const pet = this.store.data.pet
@@ -422,6 +448,31 @@ export class Aura {
     this.onInput('tap')
   }
 
+  // ── Conversation tracking ───────────────────────────────────
+
+  private noteSpeech(who: 'self' | 'other'): void {
+    const now = Date.now()
+    if (who === 'self') this.lastSelfAt = now
+    else this.lastOtherAt = now
+    if (this.convo) {
+      this.convo.lastSpeechAt = now
+      return
+    }
+    // Both voices within the last 45s = a back-and-forth conversation
+    if (this.lastSelfAt && this.lastOtherAt && Math.abs(this.lastSelfAt - this.lastOtherAt) < 45_000) {
+      this.convo = { startedAt: Math.min(this.lastSelfAt, this.lastOtherAt), lastSpeechAt: now, tense: 0, storm: 0, fog: 0 }
+      // A nudge already on the lens steps aside; its tension carries into the debrief
+      if (this.phase === 'nudged' && this.pending) {
+        if (this.pending.kind === 'fog') this.convo.fog++
+        else this.convo.storm++
+        this.convo.tense++
+        this.pending = null
+        this.setPhase('idle')
+      }
+      diagEvent('convo_start')
+    }
+  }
+
   // ── Voice setup ─────────────────────────────────────────────
 
   /**
@@ -494,8 +545,29 @@ export class Aura {
       this.pending = null
     }
 
-    // New spike → nudge
+    // Conversation ended (everyone quiet): offer the debrief if it got tense
+    if (this.convo && now - this.convo.lastSpeechAt > t.convoGapMs) {
+      const c = this.convo
+      this.convo = null
+      diagEvent('convo_end', { tense: c.tense, minutes: Math.round((now - c.startedAt) / 60000) })
+      if (
+        c.tense >= t.debriefMinTense &&
+        this.phase === 'idle' &&
+        !this.pending &&
+        !this.watch &&
+        now > this.quietUntil
+      ) {
+        this.pending = { kind: c.fog > c.storm ? 'fog' : 'storm', since: c.startedAt }
+        this.debrief = true
+        this.nudgeShownAt = now
+        this.setPhase('nudged')
+        diagEvent('debrief', this.pending.kind)
+      }
+    }
+
+    // New spike → nudge (held while a conversation is going on)
     if (
+      !this.convo &&
       this.phase === 'idle' &&
       !this.pending &&
       !this.watch &&
@@ -505,6 +577,7 @@ export class Aura {
       const spike = this.mood.spike(now)
       if (spike) {
         this.pending = spike
+        this.debrief = false
         this.nudgeShownAt = now
         this.setPhase('nudged')
         diagEvent('nudge', spike.kind)
@@ -694,8 +767,11 @@ export class Aura {
         return wideFrame(base({ stage: 'egg', weather: 'none', scale: wobble, frame: 0 }), `An egg is waiting.\nSay "Hi ${pet.name}" out loud to hatch it.`)
       }
       case 'nudged': {
-        const body =
-          this.pending?.kind === 'fog'
+        const body = this.debrief
+          ? this.pending?.kind === 'fog'
+            ? 'That one was heavy.\n\nTap when you\'re free\nfor 30 seconds.'
+            : 'That got tense.\n\nTap when you\'re free\nfor 30 seconds.'
+          : this.pending?.kind === 'fog'
             ? 'Feeling heavy?\n\nTap when you have\n30 seconds.'
             : 'Storm brewing.\n\nTap when you have\n30 seconds.'
         return cardFrame(base({ face: this.pending?.kind === 'fog' ? 'sad' : 'worried' }), body, 'swipe: not now')
@@ -803,11 +879,14 @@ export class Aura {
         '2x tap: try again',
       )
     }
-    const hint = `${stageLabel(stage)} · ${left} bounce-back${left === 1 ? '' : 's'} to Zenith`
+    const hint = `${stageLabel(stage)} · ${left} to Zenith`
     if (this.watch) {
       return cardFrame(base({ face: 'happy', weather: 'none' }), 'Now say something calm,\nlike "Okay. I\'ve got this."', hint)
     }
     if (this.pending) return cardFrame(base({ face: 'worried' }), 'Tap to start a reset.', hint)
+    if (this.convo) {
+      return cardFrame(base({ face: 'calm' }), "I'm listening.\nI'll wait until you're\ndone talking.", hint)
+    }
     if (weather === 'stormy') {
       return cardFrame(base(), 'Keep going...\ntell me more.', hint)
     }

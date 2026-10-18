@@ -157,8 +157,8 @@ export function mountPhoneUi(d: PhoneDeps): void {
       <div class="toggle"><div><div>Demo mode</div><div class="sub">Shorter timers so the full loop fits in a pitch</div></div><input type="checkbox" id="demo"></div>
       <div class="toggle"><div><div>Blank lens while working</div><div class="sub">Off: a tiny dim pet stays in the corner. On: the lens is empty until your mood shifts, a nudge fires, or you tap.</div></div><input type="checkbox" id="quiet"></div>
       <div class="toggle"><div>Pet name</div><input type="text" id="petName" style="width:140px"></div>
-      <div style="margin-top:12px"><div class="sub" style="margin-bottom:6px">Try it by typing (goes through the same pipeline as speech)</div>
-        <div class="row"><input type="text" id="typed" placeholder="e.g. this deadline is impossible, nothing works"><button class="btn" id="send">Send</button></div>
+      <div style="margin-top:12px"><div class="sub" style="margin-bottom:6px">Try it by typing (same pipeline as speech). Start a line with <b>them:</b> to play the other person in a conversation.</div>
+        <div class="row"><input type="text" id="typed" placeholder="you: this deadline is impossible · them: start with &quot;them:&quot;"><button class="btn" id="send">Send</button></div>
       </div>
       <div class="toggle" style="margin-top:6px"><div><div>Voice check</div><div class="sub" id="voiceSub">Teaches AuraPet how the glasses hear <i>your</i> voice, so only you count. Also: long-press the temple.</div></div><button class="btn" id="voiceBtn">Start</button></div>
       <div class="row" style="margin-top:12px;gap:8px">
@@ -577,7 +577,13 @@ function phaseLabel(s: AuraSnapshot): string {
     case 'voicecheck':
       return 'Voice check'
     default:
-      return s.watching ? 'Watching for recovery' : s.pending ? 'Reset waiting' : ''
+      return s.inConversation
+        ? 'In a conversation · nudges held'
+        : s.watching
+          ? 'Watching for recovery'
+          : s.pending
+            ? 'Reset waiting'
+            : ''
   }
 }
 

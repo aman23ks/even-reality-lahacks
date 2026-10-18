@@ -17,6 +17,10 @@ export interface Timings {
   instantTrigger?: boolean
   /** override MOOD.negativeIntensity (judge mode counts mild annoyance too) */
   negativeIntensity?: number
+  /** silence (from everyone) that marks the end of a conversation */
+  convoGapMs: number
+  /** tense sentences from the wearer during a conversation that earn a debrief */
+  debriefMinTense: number
 }
 
 export const NORMAL_TIMINGS: Timings = {
@@ -28,6 +32,8 @@ export const NORMAL_TIMINGS: Timings = {
   paceCooldownMs: 45_000,
   triggerScore: 0.58,
   triggerMinUtterances: 2,
+  convoGapMs: 20_000,
+  debriefMinTense: 2,
 }
 
 export const DEMO_TIMINGS: Timings = {
@@ -39,6 +45,8 @@ export const DEMO_TIMINGS: Timings = {
   paceCooldownMs: 20_000,
   triggerScore: 0.58,
   triggerMinUtterances: 2,
+  convoGapMs: 10_000,
+  debriefMinTense: 1,
 }
 
 /** Judge mode: a stranger wearing G2 for ~2 minutes should reach Zenith in three quick rounds */
@@ -53,6 +61,8 @@ export const JUDGE_TIMINGS: Timings = {
   triggerMinUtterances: 1,
   instantTrigger: true,
   negativeIntensity: 0.3,
+  convoGapMs: 6_000,
+  debriefMinTense: 1,
 }
 
 export const MOOD = {
