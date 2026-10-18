@@ -1,7 +1,7 @@
 /**
- * src/game/petAscii.ts — Physical Creature Growth ASCII Art tuned for G2 (576x288 Mono Display)
+ * src/game/petAscii.ts — Clean, Minimalist Pixel/ASCII Art tuned for G2 (576x288 Green OLED)
  * 
- * Each pet visibly GROWS from Tiny Hatchling -> Medium Wisp -> Large Beast -> Giant Ascended Guardian
+ * Symmetrical, crisp Tamagotchi/VoidPet aesthetic with 4 distinct growth sizes.
  */
 
 import type { EmotionType, PetStage } from '../types/pet'
@@ -14,214 +14,198 @@ export interface PetArtSet {
 }
 
 export const PET_ASCII_LIBRARY: Record<string, PetArtSet> = {
-  // Joy / Fire Creature: Solispark
+  // Joy / Sun Fox: Solispark
   solispark: {
     hatchling: [
-      '  (..)  ',
-      ' /"*"\\ ',
-      '  ~v~   ',
-      ' (Tiny) ',
+      '  ╭───╮  ',
+      '  │•‿•│ ✨',
+      '  ╰─v─╯  ',
     ].join('\n'),
 
     wisp: [
-      '   .-.   ',
-      '  (^o^)  ',
-      ' /| * |\\ ',
-      '  ~\" \"~  ',
-      ' (Wisp)  ',
+      '   /\\_/\\   ',
+      '  ( •‿• ) ✨',
+      '  ╭─m─m─╮  ',
+      '  ╰─────╯  ',
     ].join('\n'),
 
     juvenile: [
-      '   \\ | /   ',
-      '  (\\_-_/)  ',
-      ' =( ^w^ )= ',
-      '  /| * |\\  ',
-      '  c(\")(\")  ',
-      ' (Beast)   ',
+      '    |\\_/\\_/|    ',
+      '   (  ★ ‿ ★  ) ☀',
+      '  ╭──( ✦ ✦ )──╮ ',
+      '  │   c u u   │ ',
+      '  ╰───────────╯ ',
     ].join('\n'),
 
     ascended: [
-      '  *~.  \\|/  .~*  ',
-      ' / \\ \\(\\_/) / /\\ ',
-      '(   =(^O^)=   )  ',
-      ' \\ \\_/c(\")\\_/ /  ',
-      '  \'--\'\"\"\"\"\'--\'   ',
-      ' *~ ZENITH SOL ~* ',
+      '  ☼  /|___/|\\___|\\  ☼  ',
+      '    (   ★ ‿ ★   )     ',
+      '   ╭─(  ✦ ☀️ ✦  )─╮    ',
+      '  <(  │  ~~~  │  )>   ',
+      '   ╰──┴──m─m──┴──╯    ',
+      '  ★ SOLAR GUARDIAN ★   ',
     ].join('\n'),
   },
 
-  // Calm / Water Spirit: Lumidrop
+  // Calm / Water Dew: Lumidrop
   lumidrop: {
     hatchling: [
-      '  (..)  ',
-      ' /~~~\\ ',
-      '  \" \"   ',
-      ' (Tiny) ',
+      '  ╭───╮  ',
+      '  │˘◡˘│ 💧',
+      '  ╰───╯  ',
     ].join('\n'),
 
     wisp: [
-      '   .---.   ',
-      '  ( -_- )  ',
-      ' /(  ~  )\\ ',
-      '   \"\" \"\"   ',
-      '  (Wisp)   ',
+      '   ╭──────╮   ',
+      '  (  ˘ ◡ ˘ ) ☯',
+      '   ╰──────╯   ',
+      '    ~ ~ ~ ~   ',
     ].join('\n'),
 
     juvenile: [
-      '   ~ .---. ~   ',
-      '  ( ( ˘◡˘ ) )  ',
-      ' ~/(  ~~~  )\\~ ',
-      '   /\"\"   \"\"\\   ',
-      '   (Juvenile)  ',
+      '    ╭──────────╮    ',
+      '   ( (  ☯ ◡ ☯  ) )  ',
+      '  ~╰─(  ~~~  )─╯~   ',
+      '     /\"\"    \"\"\\     ',
     ].join('\n'),
 
     ascended: [
-      '  ~*~  .---.  ~*~  ',
-      ' ( ( ( ☯◡☯ ) ) )  ',
-      '~/(   ~~~~~   )\\~ ',
-      '(  ( (  ~  ) )  ) ',
-      ' ~*~  \"\" \"\"  ~*~  ',
-      '  * ZENITH CALM *  ',
+      '   ~*~  ╭──────────╮  ~*~   ',
+      '  ( (  ( (  ˘ ◡ ˘  ) )  ) ) ',
+      '  ~╰───(   ☯ 💧 ☯   )───╯~  ',
+      '  ( (  (   ~~~~~   )  ) )   ',
+      '   ~*~  ╰──────────╯  ~*~   ',
+      '     ★ ZENITH SERENITY ★    ',
     ].join('\n'),
   },
 
-  // Anxiety / Wind Sprite: Zephyr (Transforms panic into lightning agility!)
+  // Anxiety / Storm Sprite: Zephyr
   zephyr: {
     hatchling: [
-      '  (??)  ',
-      '  /\"\\   ',
-      '  ~ ~   ',
-      ' (Tiny) ',
+      '  ╭───╮  ',
+      '  │•_•│? 🌪️',
+      '  ╰─~─╯  ',
     ].join('\n'),
 
     wisp: [
-      '   ~.~   ',
-      '  (•_•)? ',
-      ' <( ~ )> ',
-      '  ~ / \\~ ',
-      ' (Wisp)  ',
+      '    /|   |\\    ',
+      '   (  •_•  )? ⚡',
+      '   ╭──(~)──╮   ',
+      '    ~ / \\ ~    ',
     ].join('\n'),
 
     juvenile: [
-      '  ~~ (o_o) ~~  ',
-      ' <<((  ~  ))>> ',
-      '   /| * |\\     ',
-      '  ~= / \\ =~    ',
-      '  (Zephyr)     ',
+      '     /|  _  |\\     ',
+      '   <( ( •_• ) )> ⚡ ',
+      '  <<=(  ★ ⚡ ★  )=>>',
+      '     ~ /   \\ ~     ',
     ].join('\n'),
 
     ascended: [
-      '  ==~  /\\ /\\  ~==  ',
-      ' <<( ( OvO ) )>>  ',
-      '<<<<(  ★⚡★  )>>>> ',
-      '  <=( (   ) )=>   ',
-      '  ==~  / \\  ~==   ',
-      '  * STORM GUARDIAN *',
+      '   ⚡  /|_______|\\  ⚡   ',
+      '  <<=( (  ⊙ ‿ ⊙  ) )=>> ',
+      '  <<<<(   ★ ⚡ ★   )>>>>',
+      '   <<=( (  ~~~  ) )=>>  ',
+      '      ~  /     \\  ~     ',
+      '     ★ STORM GUARDIAN ★ ',
     ].join('\n'),
   },
 
-  // Melancholy / Shadow Creature: Gloomwing (Transforms sadness into profound depth!)
+  // Sadness / Lunar Moth: Gloomwing
   gloomwing: {
     hatchling: [
-      '  (..)  ',
-      '  /...\\ ',
-      '   ...  ',
-      ' (Tiny) ',
+      '  ╭───╮  ',
+      '  │u_u│ 🌙',
+      '  ╰───╯  ',
     ].join('\n'),
 
     wisp: [
-      '   /| |\\   ',
-      '  ( ;_; )  ',
-      '  /(   )\\  ',
-      '   \"\" \"\"   ',
-      '  (Wisp)   ',
+      '   /|   |\\   ',
+      '  (  u_u  ) ✦',
+      '  ╭─(   )─╮  ',
+      '   \'--\'--\'   ',
     ].join('\n'),
 
     juvenile: [
-      '   /\\   /\\   ',
-      '  /  (u_u)  \\ ',
-      ' <  (  ✦  )  >',
-      '  \\ c(\")(\") / ',
-      '   (Gloomwing)',
+      '    /|     |\\    ',
+      '   / ( u_u ) \\ 🌙',
+      '  <  (  ✦  )  >  ',
+      '   \\  c u u  /   ',
+      '    \'-------\'    ',
     ].join('\n'),
 
     ascended: [
-      '  /\\/\\ (U_U) /\\/\\  ',
-      ' <    (  ✦✦ )    > ',
-      '<<   /(  ★  )\\   >>',
-      ' <    c(\")(\")    > ',
-      '  \\/\\/ NIGHT \\/\\/  ',
-      '  * ABYSS GUARDIAN *',
+      '   🌙  /|________|\\  🌙   ',
+      '     /  (  U _ U  )  \\    ',
+      '   <<   (   ✦ ✦   )   >>  ',
+      '    <   (  ~~~~~  )   >   ',
+      '     \\  \'--m---m--\'  /    ',
+      '     ★ ABYSS GUARDIAN ★   ',
     ].join('\n'),
   },
 
-  // Frustration / Fire-Spike: Pyre (Transforms anger into unstoppable drive!)
+  // Frustration / Ember Drake: Pyre
   pyre: {
     hatchling: [
-      '  (><)  ',
-      '  /##\\  ',
-      '  vvv   ',
-      ' (Tiny) ',
+      '  ╭───╮  ',
+      '  │>_<│ 🔥',
+      '  ╰─▲─╯  ',
     ].join('\n'),
 
     wisp: [
-      '   /\\ /\\   ',
-      '  ( >_< )  ',
-      '  <( # )>  ',
-      '   c(\")(\") ',
-      '  (Wisp)   ',
+      '    ▲   ▲    ',
+      '   ( >_< ) 🔥',
+      '   ╭─(▲)─╮   ',
+      '   ╰─m─m─╯   ',
     ].join('\n'),
 
     juvenile: [
-      '   /// \\\\\\   ',
-      '  <( >_< )>  ',
-      '  <=( # )=>  ',
-      '   c(\")(\")   ',
-      '   (Pyre Lvl)',
+      '    ▲ ▲   ▲ ▲    ',
+      '   <(  > _ <  )> ⚡',
+      '   <=(  🔥   )=> ',
+      '    c───m─m───d  ',
     ].join('\n'),
 
     ascended: [
-      ' *!*  /// \\\\\\  *!* ',
-      '<<<=( ( >=< ) )=>>>',
-      ' <<  /(  ⚡🔥 )\\  >> ',
-      '  <   c(\")(\")   >  ',
-      '  * PYRE ASCENDED * ',
+      '   🔥  ▲▲▲___▲▲▲  🔥   ',
+      '   <<=( ( > _ < ) )=>> ',
+      '   <<<=(  🔥 ⚡ 🔥  )=>>>',
+      '    <<=( (  ~~~  ) )=>> ',
+      '     c────m───m────d    ',
+      '     ★ PYRE ASCENDED ★  ',
     ].join('\n'),
   },
 
-  // Legendary Hybrid: Serenidrake (Joy + Calm)
+  // Celestial Dragon Hybrid: Serenidrake
   serenidrake: {
     hatchling: [
-      '  (☯☯)  ',
-      '  /★\\   ',
-      '  ~ ~   ',
-      ' (Hatch) ',
+      '  ╭───╮  ',
+      '  │★_★│ 🐉',
+      '  ╰─~─╯  ',
     ].join('\n'),
 
     wisp: [
-      '   *---*   ',
-      '  ( ◕‿◕ )  ',
-      '  <=(☯)=>  ',
-      '   ✦   ✦   ',
-      '  (Drake)  ',
+      '    /|   |\\   ',
+      '   (  ★‿★  ) ☯',
+      '   ╭─(★)─╮    ',
+      '    ~ ~ ~     ',
     ].join('\n'),
 
     juvenile: [
-      '   /\\  _  /\\   ',
-      '  ( (◕ ‿ ◕) )  ',
-      ' <=(  ☯★☯  )=> ',
-      '  /(       )\\  ',
-      '    /\"   \"\\    ',
-      '  (Dragon Beast)',
+      '    /|  ___  |\\   ',
+      '   ( ( ★ ‿ ★ ) ) ✦',
+      '  <=(   ☯ ★ ☯   )=>',
+      '   ╭──( ~~~ )──╮  ',
+      '    /\"\"     \"\"\\   ',
     ].join('\n'),
 
     ascended: [
-      ' ✦ /\\   /\\   /\\ ✦ ',
-      '<=( (★ ‿ ★) )=>',
-      ' <<(   ☯★☯   )>> ',
-      '<<<( (  🐉  ) )>>>',
-      '  /(  ~~~~~  )\\  ',
-      ' * ZENITH DRAGON * ',
+      '   ✦  /|___/\\___|\\  ✦   ',
+      '  <<=( (  ★ ‿ ★  ) )=>> ',
+      '  <<<(   ☯ ★ 🐉 ★ ☯   )>>>',
+      '   <=( (  ~~~~~  ) )=>  ',
+      '    ╰──┴──m───m──┴──╯   ',
+      '    ★ ZENITH DRAGON ★   ',
     ].join('\n'),
   },
 }

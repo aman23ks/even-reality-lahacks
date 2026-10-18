@@ -236,13 +236,20 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
       font-family: 'JetBrains Mono', monospace;
       color: var(--neon-green);
       white-space: pre;
-      line-height: 1.25;
-      transition: transform 0.4s ease;
-      background: rgba(0, 255, 170, 0.05);
-      border: 1px dashed rgba(0, 255, 170, 0.25);
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 0.85rem;
+      line-height: 1.3;
+      text-align: center;
+      transition: all 0.4s ease;
+      background: radial-gradient(circle, rgba(0, 255, 170, 0.14) 0%, rgba(0, 0, 0, 0.5) 100%);
+      border: 1px solid rgba(0, 255, 170, 0.35);
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      letter-spacing: 1px;
+      box-shadow: 0 0 16px rgba(0, 255, 170, 0.18) inset, 0 4px 14px rgba(0, 0, 0, 0.5);
+      min-width: 140px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     .growth-stage-indicator {
