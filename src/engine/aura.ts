@@ -21,6 +21,7 @@ import { Store, median, nextStage, stageFor, stageLabel, useJudgeStages } from '
 import type { HeadTracker } from './imu'
 import { diag, diagEvent } from '../diagnostics'
 import { ACCESSORY_NAMES, BADGES, accessoriesFor, fmtDuration, type BadgeId } from './badges'
+import { buildVoiceprint, type VoiceFeatures } from '../audio/voiceprint'
 
 export type Phase = 'hatching' | 'idle' | 'nudged' | 'active' | 'bloom' | 'cleared' | 'evolving' | 'crisis' | 'voicecheck' | 'intro'
 
@@ -95,6 +96,9 @@ export class Aura {
   private selfWatch: { since: number; assisted: boolean } | null = null
   /** Judge runs collect their own badges so a demo never touches the owner's trophies */
   private judgeBadges = new Set<BadgeId>()
+  private voiceSamples: VoiceFeatures[] = []
+  /** last sentence's voiceprint match (for the phone), null = no voiceprint */
+  lastVoiceMatch: { score: number; you: boolean } | null = null
   private judgePbMs = 0
   /** After a sharp remark: an apology within this window counts as a repair (a bounce-back) */
   private repairWindow: { since: number; until: number } | null = null
@@ -142,11 +146,15 @@ export class Aura {
     this.phase = store.data.pet.hatched ? 'idle' : 'hatching'
     if (store.data.judgeMode && !store.data.pet.hatched) setTimeout(() => this.startJudgeDemo(), 0)
     this.applyVoiceThreshold()
+    this.applyVoiceprint()
 
     glasses.onInput((t) => this.onInput(t))
     segmenter.onUtterance((u) => void this.onUtterance(u))
     segmenter.onSpeechStart(() => this.onSpeechStart())
-    segmenter.onOtherUtterance((u) => void this.onOtherUtterance(u))
+    segmenter.onOtherUtterance((u) => {
+      if (u.voiceMatch !== null) this.lastVoiceMatch = { score: u.voiceMatch, you: false }
+      void this.onOtherUtterance(u)
+    })
     segmenter.onOtherSpeaker(() => {
       this.hud.caption = 'Someone else is talking - not counted'
       this.noteSpeech('other')
@@ -182,6 +190,7 @@ export class Aura {
     this.judgePbMs = 0
     this.noticeQueue = []
     this.selfWatch = null
+    this.segmenter.useVoiceprint = false
     this.notice = null
     this.repairWindow = null
     useJudgeStages(true)
@@ -200,6 +209,7 @@ export class Aura {
 
   stopJudgeDemo(): void {
     this.store.data.judgeMode = false
+    this.segmenter.useVoiceprint = true
     useJudgeStages(false)
     this.store.save()
     this.toIdle()
@@ -232,6 +242,7 @@ export class Aura {
 
   private async onUtterance(u: Utterance): Promise<void> {
     this.lastUtt = u
+    if (u.voiceMatch !== null) this.lastVoiceMatch = { score: u.voiceMatch, you: true }
     this.noteSpeech('self')
     if (this.phase === 'voicecheck') {
       this.recordVoiceSample(u)
@@ -406,6 +417,7 @@ export class Aura {
       case 'voicecheck':
         if (t === 'double_tap') {
           this.applyVoiceThreshold()
+          this.applyVoiceprint()
           this.toIdle()
         }
         break
@@ -824,8 +836,10 @@ export class Aura {
     if (this.phase === 'hatching') return
     this.active = null
     this.voiceStep = 0
+    this.voiceSamples = []
     this.store.data.baseline.selfRatio = []
     this.segmenter.selfThreshold = 0 // accept everything while sampling
+    this.segmenter.useVoiceprint = false
     this.setPhase('voicecheck', 60_000)
     diagEvent('voice_check_start')
     this.changed()
@@ -833,14 +847,38 @@ export class Aura {
 
   private recordVoiceSample(u: Utterance): void {
     if (u.selfRatio !== null) pushCapped(this.store.data.baseline.selfRatio, Math.max(u.selfRatio, 0.01))
+    if (u.voice) this.voiceSamples.push(u.voice)
     this.voiceStep++
     if (this.voiceStep >= VOICE_LINES.length) {
       this.applyVoiceThreshold()
+      // Voice fingerprint from the three sentences
+      const vp = buildVoiceprint(this.voiceSamples)
+      if (vp) this.store.data.voiceprint = vp
+      this.applyVoiceprint()
       this.store.save()
-      this.hud.caption = `Voice tuned: your speech is tagged as you ${Math.round(median(this.store.data.baseline.selfRatio, 0) * 100)}% of the time`
-      diagEvent('voice_check_done', { samples: this.store.data.baseline.selfRatio, threshold: this.segmenter.selfThreshold })
+      this.hud.caption = vp
+        ? `Voiceprint saved (${vp.samples} sentences, ~${Math.round(vp.pitch)} Hz). Only your voice counts now.`
+        : `Voice tuned: your speech is tagged as you ${Math.round(median(this.store.data.baseline.selfRatio, 0) * 100)}% of the time`
+      diagEvent('voice_check_done', {
+        samples: this.store.data.baseline.selfRatio,
+        threshold: this.segmenter.selfThreshold,
+        voiceprint: vp ? { pitch: Math.round(vp.pitch), threshold: Math.round(vp.threshold * 100) } : null,
+      })
       this.setPhase('idle')
     }
+    this.changed()
+  }
+
+  /** Voiceprint on in normal use, off in judge mode (a judge's voice won't match the owner's) */
+  private applyVoiceprint(): void {
+    this.segmenter.voiceprint = this.store.data.voiceprint
+    this.segmenter.useVoiceprint = !this.store.data.judgeMode
+  }
+
+  clearVoiceprint(): void {
+    this.store.data.voiceprint = null
+    this.applyVoiceprint()
+    this.store.save()
     this.changed()
   }
 
@@ -1070,7 +1108,10 @@ export class Aura {
 
     if (this.phaseUntil && now > this.phaseUntil) {
       this.phaseUntil = 0
-      if (this.phase === 'voicecheck') this.applyVoiceThreshold()
+      if (this.phase === 'voicecheck') {
+        this.applyVoiceThreshold()
+        this.applyVoiceprint()
+      }
       if (['bloom', 'cleared', 'evolving', 'voicecheck', 'intro'].includes(this.phase)) this.toIdle()
     }
     if (this.phase === 'nudged' && now - this.nudgeShownAt > this.timings().nudgeVisibleMs) {

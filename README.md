@@ -18,7 +18,7 @@ listen (your voice only) → notice a sustained spiral → nudge on the lens →
 | Piece | What it does |
 |---|---|
 | **Ambient lens** | A tiny pet in the corner and one word (`clear`, `cloudy`, `stormy` or `foggy`). The lens is otherwise empty. |
-| **Speaker gate** | Uses the glasses mic's `speakerRole`. Other people's speech never counts. |
+| **Speaker gate + voice fingerprint** | Two signals decide whether a sentence is yours: the glasses mic's `speakerRole` tag, and a **voiceprint** from the 3-sentence voice check (24-band spectral shape, pitch, brightness; numbers only, never audio). On the phone/browser mic the voiceprint is the filter. Off in judge mode. Offline test with 6 synthetic voices: 33/36 owner-vs-other decisions correct. |
 | **Mood engine** | Speech-to-text plus an LLM labels each utterance storm, fog or clear, feeding a rolling score. Two or more tense utterances plus a high score trigger a nudge. One outburst never does. |
 | **Resets** | *Name it* · *In your control* · *One good thing* (voice-verified) · *Look up* (IMU-verified) · *Breathe together* (the pet grows and shrinks as a pacer; you have to stay quiet). Tapping never completes one. |
 | **Recovery** | A reset only counts as a recovery when your mood actually clears afterwards. The bounce-back time is recorded. |

@@ -6,6 +6,7 @@
  */
 
 import { diag } from '../diagnostics'
+import { matchScore, voiceFeatures, type VoiceFeatures, type Voiceprint } from './voiceprint'
 
 export const SAMPLE_RATE = 16000
 const SUB = 320 // 20ms
@@ -24,6 +25,10 @@ export interface Utterance {
   endedAt: number
   /** share of loud frames the glasses tagged as the wearer (null when the mic gives no tags) */
   selfRatio: number | null
+  /** voice fingerprint features of this utterance */
+  voice: VoiceFeatures | null
+  /** 0..1 match against the wearer's voiceprint (null = no voiceprint / not used) */
+  voiceMatch: number | null
 }
 
 type Role = 'self' | 'other' | 'unknown'
@@ -36,6 +41,10 @@ export class Segmenter {
    * Tuned per person by the voice check (see Aura.calibrateVoice).
    */
   selfThreshold = 0.15
+  /** The wearer's voice fingerprint (from the voice check); null = not set up */
+  voiceprint: Voiceprint | null = null
+  /** Off in judge mode: a judge's voice won't match the owner's print */
+  useVoiceprint = true
 
   private carry = new Float32Array(0)
   private noise = 0.01
@@ -159,7 +168,16 @@ export class Segmenter {
 
     if (voicedMs < MIN_VOICED_MS) return
 
-    const isWearer = selfRatio === null || selfRatio >= this.selfThreshold
+    // Two signals: the glasses' per-frame speaker tag and the voice fingerprint
+    const pitches = framePitches(voiced)
+    const voice = voiceFeatures(voiced, pitches)
+    const vp = this.useVoiceprint ? this.voiceprint : null
+    const voiceMatch = vp && voice ? matchScore(vp, voice) : null
+    const isWearer = decideWearer(selfRatio, this.selfThreshold, voiceMatch, vp?.threshold ?? 0)
+    if (voiceMatch !== null) {
+      diag.recentVoiceMatches.push(Math.round(voiceMatch * 100))
+      if (diag.recentVoiceMatches.length > 20) diag.recentVoiceMatches.shift()
+    }
     diag.recentSelfRatios.push(selfRatio === null ? -1 : Math.round(selfRatio * 100) / 100)
     if (diag.recentSelfRatios.length > 20) diag.recentSelfRatios.shift()
     // Trim trailing silence
@@ -170,9 +188,11 @@ export class Segmenter {
       durationMs: (pcm.length / SAMPLE_RATE) * 1000,
       voicedMs,
       rms: rmsMean,
-      pitchHz: medianPitch(voiced),
+      pitchHz: pitches.length ? [...pitches].sort((a, b) => a - b)[Math.floor(pitches.length / 2)] : 0,
       endedAt: Date.now(),
       selfRatio,
+      voice,
+      voiceMatch,
     }
     if (!isWearer) {
       diag.ignoredOtherSpeech++
@@ -211,16 +231,32 @@ function floatToInt16(a: Float32Array): Int16Array {
 }
 
 /** Median autocorrelation pitch over pairs of voiced 20ms frames (40ms windows) */
-function medianPitch(voiced: Float32Array[]): number {
+/** Pitch estimates over pairs of voiced 20ms frames (40ms windows) */
+function framePitches(voiced: Float32Array[]): number[] {
   const pitches: number[] = []
   for (let i = 0; i + 1 < voiced.length; i += 3) {
-    const win = concat([voiced[i], voiced[i + 1]])
-    const p = autocorrPitch(win)
+    const p = autocorrPitch(concat([voiced[i], voiced[i + 1]]))
     if (p > 0) pitches.push(p)
   }
-  if (!pitches.length) return 0
-  pitches.sort((a, b) => a - b)
-  return pitches[Math.floor(pitches.length / 2)]
+  return pitches
+}
+
+/**
+ * Is this utterance the wearer?
+ *  - glasses tag + voiceprint: either strong signal wins; when they disagree, the average decides
+ *  - glasses tag only: the tag share (as before)
+ *  - voiceprint only (phone / browser mic): the voiceprint decides
+ *  - neither: everything counts
+ */
+function decideWearer(selfRatio: number | null, tagThr: number, match: number | null, matchThr: number): boolean {
+  const tagged = selfRatio !== null
+  if (!tagged && match === null) return true
+  if (!tagged) return match! >= matchThr
+  if (match === null) return selfRatio! >= tagThr
+  const tagScore = Math.min(1, selfRatio! / Math.max(0.01, tagThr * 2)) // 0.5 at the threshold
+  const voiceScore = Math.min(1, (match! / Math.max(0.01, matchThr)) * 0.5) // 0.5 at the threshold
+  if (selfRatio! >= tagThr * 2.5 || match! >= matchThr + 0.15) return true
+  return (tagScore + voiceScore) / 2 >= 0.5
 }
 
 function autocorrPitch(x: Float32Array): number {

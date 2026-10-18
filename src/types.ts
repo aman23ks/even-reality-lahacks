@@ -95,6 +95,8 @@ export interface PersistedData {
   pbMs: number
   /** times you calmed down before any reset */
   selfRecoveries: number
+  /** voice fingerprint from the voice check (numbers only, never audio) */
+  voiceprint: import('./audio/voiceprint').Voiceprint | null
 }
 
 export type InputType = 'tap' | 'double_tap' | 'swipe_forward' | 'swipe_backward' | 'long_press'

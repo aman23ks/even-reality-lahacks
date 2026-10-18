@@ -29,6 +29,7 @@ export function freshData(): PersistedData {
     badges: {},
     pbMs: 0,
     selfRecoveries: 0,
+    voiceprint: null,
   }
 }
 

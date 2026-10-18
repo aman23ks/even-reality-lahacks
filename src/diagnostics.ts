@@ -35,6 +35,8 @@ export const diag = {
   /** per-utterance share of frames tagged as the wearer (-1 = untagged mic) */
   recentSelfRatios: [] as number[],
   selfThreshold: 0.15,
+  /** per-utterance voiceprint match % (when a voiceprint is set) */
+  recentVoiceMatches: [] as number[],
   startupPageResult: null as number | null,
   imageMode: 'png',
   lastImageResult: '',

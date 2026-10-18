@@ -180,7 +180,7 @@ export function mountPhoneUi(d: PhoneDeps): void {
       <div style="margin-top:12px"><div class="sub" style="margin-bottom:6px">Try it by typing (same pipeline as speech). Start a line with <b>them:</b> to play the other person in a conversation.</div>
         <div class="row"><input type="text" id="typed" placeholder="you: this deadline is impossible · them: start with &quot;them:&quot;"><button class="btn" id="send">Send</button></div>
       </div>
-      <div class="toggle" style="margin-top:6px"><div><div>Voice check</div><div class="sub" id="voiceSub">Teaches AuraPet how the glasses hear <i>your</i> voice, so only you count. Start it here (on the glasses, a long press opens the G2 system menu).</div></div><button class="btn" id="voiceBtn">Start</button></div>
+      <div class="toggle" style="margin-top:6px"><div><div>Voice fingerprint</div><div class="sub" id="voiceSub">Teaches AuraPet how the glasses hear <i>your</i> voice, so only you count. Start it here (on the glasses, a long press opens the G2 system menu).</div></div><button class="btn" id="voiceBtn">Start</button></div>
       <div class="row" style="margin-top:12px;gap:8px">
         <button class="btn" id="micBtn">Start microphone</button>
         <button class="btn" id="resetData">Reset all data</button>
@@ -277,6 +277,10 @@ export function mountPhoneUi(d: PhoneDeps): void {
     $('heard').textContent = s.lastTranscript
       ? `Last heard (shown here only, never saved): "${s.lastTranscript}" → ${s.lastLabel}${s.lastEmotion ? `, ${s.lastEmotion}` : ''}`
       : 'Listening for your voice only.'
+    const vm = d.aura.lastVoiceMatch
+    if (vm && !data.judgeMode) {
+      $('heard').textContent += `  ·  Voiceprint: ${vm.you ? 'you' : 'someone else'} (match ${Math.round(vm.score * 100)}%)`
+    }
 
     $('setupBanner').innerHTML =
       d.glassesConnected() && !d.lensActive()
@@ -284,10 +288,15 @@ export function mountPhoneUi(d: PhoneDeps): void {
         : be.online && !d.aura.speechReady
         ? `<div class="banner"><b>AuraPet can hear you but can't understand words yet.</b><div class="sub" style="margin-top:4px">This phone has no built-in speech recognition. Add <code>GROQ_API_KEY</code> (free at console.groq.com) to <code>.env</code> on the laptop, then run <code>npm run start:demo</code>.</div></div>`
         : ''
-    const ratios = data.baseline.selfRatio
-    $('voiceSub').innerHTML = ratios.length
-      ? `Tuned: the glasses tag your speech as you ${Math.round([...ratios].sort((a, b) => a - b)[Math.floor(ratios.length / 2)] * 100)}% of the time. Redo it in a new room.`
-      : 'Teaches AuraPet how the glasses hear <i>your</i> voice, so only you count. Start it here.'
+    const vp = data.voiceprint
+    $('voiceSub').innerHTML = vp
+      ? `<b>Voiceprint saved</b> (${vp.samples} sentences, ~${Math.round(vp.pitch)} Hz, match needed ${Math.round(vp.threshold * 100)}%). Only your voice feeds AuraPet; it's off in judge mode. Numbers only, never audio. <a href="#" id="clearVp" style="color:var(--text2)">Remove</a>`
+      : 'Read 3 sentences to create your <b>voiceprint</b>, so only your voice counts (also on the phone mic). Numbers only, never audio.'
+    const clear = document.getElementById('clearVp')
+    if (clear) clear.onclick = (e) => {
+      e.preventDefault()
+      d.aura.clearVoiceprint()
+    }
     $('crisis').innerHTML =
       s.phase === 'crisis'
         ? `<div class="banner"><b>You matter.</b><div class="sub" style="margin-top:4px">That sounded really heavy. AuraPet has paused its game. Please reach out to someone you trust, a friend, family member, or someone nearby, and let them know how you're feeling.</div></div>`
@@ -634,6 +643,7 @@ function diagText(d: PhoneDeps): string {
     `roles:${JSON.stringify(a.byRole)} sources:${JSON.stringify(a.bySource)}`,
     `utterances:${diag.utterances} ignoredOthers:${diag.ignoredOtherSpeech} imu:${diag.imuFrames} selfThreshold:${diag.selfThreshold}`,
     `recent self ratios: ${diag.recentSelfRatios.join(' ')}`,
+    `voiceprint: ${d.store.data.voiceprint ? `on (thr ${Math.round(d.store.data.voiceprint.threshold * 100)}%)` : 'none'} · recent matches: ${diag.recentVoiceMatches.join(' ')}`,
     `image:${diag.imageMode} last:${diag.lastImageResult || '-'}  speechAPI:${diag.speechRecognitionAvailable}`,
     `backend:${be.online} stt:${be.stt} llm:${be.llm}`,
     ...diag.events.slice(-8).map((e) => `${new Date(e.t).toLocaleTimeString()} ${e.kind} ${e.detail !== undefined ? JSON.stringify(e.detail) : ''}`),
