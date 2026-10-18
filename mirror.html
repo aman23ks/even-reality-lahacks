@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuraPet · Lens Mirror</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; color: #9fe8b6; font-family: -apple-system, system-ui, sans-serif; }
+      body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; }
+      .frame { width: min(92vw, 160vh); aspect-ratio: 2 / 1; border: 2px solid #1a3a26; border-radius: 28px; padding: 18px; box-shadow: 0 0 80px rgba(64, 255, 128, 0.08); }
+      canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+      #caption { font-size: clamp(16px, 2.2vw, 28px); min-height: 1.4em; text-align: center; max-width: 90vw; color: #cfe; }
+      header { position: fixed; top: 14px; left: 20px; right: 20px; display: flex; justify-content: space-between; font-size: 14px; color: #5c8; letter-spacing: .08em; text-transform: uppercase; }
+      #status.live::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #40ff80; margin-right: 6px; }
+    </style>
+  </head>
+  <body>
+    <header><span>AuraPet · what the wearer sees</span><span id="status">connecting...</span></header>
+    <div class="frame"><canvas id="lens"></canvas></div>
+    <div id="caption"></div>
+    <script type="module" src="/src/mirror.ts"></script>
+  </body>
+</html>

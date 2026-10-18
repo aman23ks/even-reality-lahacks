@@ -19,7 +19,7 @@ import { getPetAscii, getEmotionEmoji } from './game/petAscii'
 import type { ActiveHudScreen } from './types/pet'
 
 export class AuraPetApp {
-  private bridge!: EvenAppBridge
+  private bridge?: EvenAppBridge
   private display!: DisplayManager
   private events!: EventManager
   private api: ApiClient
@@ -59,13 +59,50 @@ export class AuraPetApp {
     if (this.isStarted) return
     this.isStarted = true
 
-    console.log('[AuraPet] Connecting to Even Reality Bridge...')
-    this.bridge = await waitForEvenAppBridge()
-    console.log('[AuraPet] G2 Bridge Connected!')
+    console.log('[AuraPet] Checking for Even Reality Bridge...')
+    
+    // 1. Check if bridge is already injected
+    const existingBridge = (window as any).evenAppBridge
+    if (existingBridge) {
+      this.attachBridge(existingBridge)
+    } else {
+      // 2. Race quick check for fast startup without blocking audio
+      try {
+        const b = await Promise.race([
+          waitForEvenAppBridge(),
+          new Promise<undefined>((_, reject) =>
+            setTimeout(() => reject(new Error('Fast bridge wait timeout')), 800)
+          ),
+        ])
+        if (b) this.attachBridge(b)
+      } catch {
+        console.log('[AuraPet] Initial bridge wait timed out — will listen in background for injection')
+      }
+    }
 
-    this.display = new DisplayManager(this.bridge)
-    this.events = new EventManager(this.bridge)
-    this.voiceAnalyzer.setBridge(this.bridge)
+    // 3. Persistent background listener: if Even Lab injects bridge after page load
+    window.addEventListener('evenAppBridgeReady', () => {
+      console.log('[AuraPet] Received evenAppBridgeReady event!')
+      const winBridge = (window as any).evenAppBridge
+      if (winBridge) this.attachBridge(winBridge)
+    })
+
+    // 4. Polling fallback for webviews where event might not propagate
+    let pollCount = 0
+    const bridgePoller = setInterval(() => {
+      pollCount++
+      const winBridge = (window as any).evenAppBridge
+      if (winBridge && !this.bridge) {
+        console.log('[AuraPet] Discovered evenAppBridge via poller at attempt', pollCount)
+        this.attachBridge(winBridge)
+        clearInterval(bridgePoller)
+      }
+      if (pollCount > 20) clearInterval(bridgePoller)
+    }, 500)
+
+    // Fallback display and events for simulator/browser
+    if (!this.display) this.display = new DisplayManager(this.bridge)
+    if (!this.events) this.events = new EventManager(this.bridge)
 
     // Sync initial state
     this.state.update({
@@ -74,11 +111,10 @@ export class AuraPetApp {
       activeQuests: this.petManager.getActiveQuests(),
     })
 
-    // Setup G2 Input and Audio handlers
-    this.setupGlassesInputHandlers()
+    // Setup Audio and Emotion Pipeline
     this.setupAudioAndEmotionPipeline()
 
-    // Render Initial Pet HUD to G2 Glasses
+    // Render Initial Pet HUD to G2 Glasses or Mirror
     await this.renderHudScreen(true)
 
     // Check backend health & sync voice profile
@@ -86,6 +122,30 @@ export class AuraPetApp {
 
     // Start continuous voice listening
     await this.startListening()
+  }
+
+  /** Attach G2 glasses bridge and wire hardware listeners */
+  attachBridge(bridge: EvenAppBridge): void {
+    if (this.bridge === bridge && this.startupRendered) return
+    console.log('[AuraPet] G2 Glasses Bridge Connected & Attached!')
+    this.bridge = bridge
+    this.display = new DisplayManager(bridge)
+    this.events = new EventManager(bridge)
+    this.voiceAnalyzer.setBridge(bridge)
+    this.setupGlassesInputHandlers()
+
+    try {
+      bridge.onDeviceStatusChanged((status) => {
+        console.log('[AuraPet] Glasses Device Status:', status)
+      })
+    } catch {
+      // not supported in all environments
+    }
+
+    this.startupRendered = false
+    this.renderHudScreen(true).catch((err) => {
+      console.warn('[AuraPet] Frame push notification:', err)
+    })
   }
 
   /** Setup Touchpad gestures from G2 temple */
@@ -229,11 +289,23 @@ export class AuraPetApp {
       }
     })
 
-    // Listen to continuous Wearer Speech Transcriptions
+    // Listen to continuous Speech Transcriptions with Speaker Diarization gating
     this.voiceAnalyzer.onTranscription(async (tx) => {
       const cur = this.state.get()
       const list = [tx, ...cur.recentTranscripts].slice(0, 15)
 
+      // 1. If Diarizer detected an external / ambient speaker, filter out from pet!
+      if (!tx.isWearerVoice) {
+        console.warn(`[AuraPet Diarization] External voice filtered out: [${tx.speakerLabel}] "${tx.text}"`)
+        this.state.update({
+          recentTranscripts: list,
+          lastTranscribedText: `[Filtered ${tx.speakerLabel}]: "${tx.text}"`,
+          coachMessage: `🛡️ Diarizer: Filtered out ${tx.speakerLabel}`,
+        })
+        return
+      }
+
+      // 2. Wearer speech verified: update state and award emotion points
       this.state.update({
         recentTranscripts: list,
         lastTranscribedText: tx.text,
@@ -243,7 +315,7 @@ export class AuraPetApp {
         endGoal: this.petManager.getEndGoalStatus(),
       })
 
-      // Ingest transcription emotion into Pet Manager
+      // Ingest wearer transcription emotion into Pet Manager
       this.petManager.applyVoiceEmotion({
         primary: tx.primaryEmotion,
         confidence: tx.confidence,
@@ -254,6 +326,9 @@ export class AuraPetApp {
         timestamp: tx.timestamp,
         isUserVoice: true,
         userVoiceConfidence: tx.wearerConfidence,
+        speakerId: tx.speakerId,
+        speakerLabel: tx.speakerLabel,
+        diarizationConfidence: tx.diarizationConfidence,
       })
 
       await this.renderHudScreen()
@@ -451,11 +526,36 @@ export class AuraPetApp {
     }
   }
 
-  /** Force re-render startup page to glasses lens */
-  async reconnectGlasses(): Promise<number> {
-    console.log('[AuraPet] Forcing startup page push to glasses...')
+  /** Force re-render startup page to glasses lens or connect bridge if newly available */
+  async reconnectGlasses(): Promise<{ success: boolean; message: string }> {
+    console.log('[AuraPet] Reconnecting / pushing to glasses...')
+    if (!this.bridge) {
+      const winBridge = (window as any).evenAppBridge
+      if (winBridge) {
+        this.attachBridge(winBridge)
+        return { success: true, message: 'Attached Even App Bridge and pushed Pet HUD to glasses!' }
+      }
+      try {
+        const b = await Promise.race([
+          waitForEvenAppBridge(),
+          new Promise<undefined>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2500)),
+        ])
+        if (b) {
+          this.attachBridge(b)
+          return { success: true, message: 'Connected to G2 Glasses via Even App Bridge!' }
+        }
+      } catch {
+        console.warn('[AuraPet] Bridge not detected on window. Running in browser simulation mode.')
+      }
+    }
+
     this.startupRendered = false
     await this.renderHudScreen(true)
-    return 0
+    return {
+      success: !!this.bridge,
+      message: this.bridge
+        ? 'HUD successfully sent to G2 glasses lens!'
+        : 'Simulator updated. To display on physical glasses: Ensure phone is Bluetooth-connected to G2, open Even Lab Prototype, and scan the QR code.',
+    }
   }
 }

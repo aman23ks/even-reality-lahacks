@@ -67,7 +67,7 @@ export interface ImageConfig {
  *   await display.updateText(1, 'main', 'Updated content!')
  */
 export class DisplayManager {
-  constructor(private bridge: EvenAppBridge) {}
+  constructor(private bridge?: EvenAppBridge) {}
 
   /** Create a TextContainerProperty from a simplified config */
   createText(config: TextConfig): TextContainerProperty {
@@ -105,6 +105,7 @@ export class DisplayManager {
     textContainers: TextContainerProperty[] = [],
     imageContainers: ImageContainerProperty[] = [],
   ): Promise<number> {
+    if (!this.bridge) return 0
     const totalContainers = textContainers.length + imageContainers.length
 
     const result = await this.bridge.createStartUpPageContainer(
@@ -128,6 +129,7 @@ export class DisplayManager {
     textContainers: TextContainerProperty[] = [],
     imageContainers: ImageContainerProperty[] = [],
   ): Promise<number> {
+    if (!this.bridge) return 0
     const totalContainers = textContainers.length + imageContainers.length
 
     const success = await this.bridge.rebuildPageContainer(
@@ -148,6 +150,7 @@ export class DisplayManager {
 
   /** Update text in an existing container without re-rendering the full page */
   async updateText(containerId: number, containerName: string, content: string): Promise<void> {
+    if (!this.bridge) return
     await this.bridge.textContainerUpgrade(
       new TextContainerUpgrade({
         containerID: containerId,
@@ -265,13 +268,13 @@ export class DisplayManager {
 
   /** Show the system exit confirmation dialog (required on root page double-tap) */
   exitApp(mode: 0 | 1 = 1): void {
-    // mode 1 = system exit-confirmation dialog (required for QA)
-    // mode 0 = silent exit (rejected in QA review)
+    if (!this.bridge) return
     this.bridge.shutDownPageContainer(mode)
   }
 
   /** Navigate back or shutdown page container */
   goBack(): void {
+    if (!this.bridge) return
     this.bridge.shutDownPageContainer(1)
   }
 }

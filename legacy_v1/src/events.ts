@@ -48,7 +48,7 @@ export class EventManager {
   private handlers = new Map<G2EventType, G2EventHandler[]>()
   private containerHandlers = new Map<number, G2EventHandler[]>()
 
-  constructor(private bridge: EvenAppBridge) {
+  constructor(private bridge?: EvenAppBridge) {
     this.setupEventListener()
   }
 
@@ -73,6 +73,7 @@ export class EventManager {
   }
 
   private setupEventListener(): void {
+    if (!this.bridge) return
     this.bridge.onEvenHubEvent((rawEvent) => {
       // Text container events
       const textEvent = rawEvent.textEvent

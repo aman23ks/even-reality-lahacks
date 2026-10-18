@@ -20,6 +20,9 @@ export interface EmotionReading {
   timestamp: number
   isUserVoice: boolean
   userVoiceConfidence: number
+  speakerId?: string
+  speakerLabel?: string
+  diarizationConfidence?: number
 }
 
 export interface SpeechTranscriptionRecord {
@@ -32,6 +35,9 @@ export interface SpeechTranscriptionRecord {
   pitchHz: number
   isWearerVoice: boolean
   wearerConfidence: number
+  speakerId: string
+  speakerLabel: string
+  diarizationConfidence: number
 }
 
 // 4 distinct physical growth stages from small to giant
@@ -84,6 +90,12 @@ export interface WellnessQuest {
   rewardEssence: number
   completed: boolean
   durationSec?: number
+  category?: 'anxiety_remedy' | 'burnout_shield' | 'joy_anchor' | 'mindful_reset' | 'grit_power'
+  categoryLabel?: string
+  icon?: string
+  triggerReason?: string
+  steps?: string[]
+  isDynamic?: boolean
 }
 
 export interface BreedingPair {
@@ -101,6 +113,12 @@ export interface VoiceFingerprint {
   medianPitchHz: number
   pitchVariance: number
   spectralCentroid: number
+  spectralRolloff?: number
+  nearFieldRmsThreshold?: number
+  diarizationMode?: 'strict' | 'adaptive' | 'permissive'
+  enrolledPhrase?: string
+  minPitchHz?: number
+  maxPitchHz?: number
   sampleCount: number
 }
 

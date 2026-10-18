@@ -15,5 +15,8 @@ export default defineConfig({
     // Output to dist/ — this is what `evenhub pack` packages into the .ehpk.
     outDir: 'dist',
     target: 'es2022',
+    rollupOptions: {
+      input: { main: 'index.html', mirror: 'mirror.html' },
+    },
   },
 })

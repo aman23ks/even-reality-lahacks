@@ -1,0 +1,20 @@
+# Render Blueprint: render.com → New → Blueprint → pick this repo + branch.
+# You'll be asked for the secret values marked sync: false.
+services:
+  - type: web
+    name: aurapet
+    runtime: node
+    plan: free # upgrade to "starter" for judging day: free instances sleep after 15 min idle (~30-60s cold start)
+    branch: aurapet-v2
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: APP_KEY # must match VITE_APP_KEY used by `npm run package:prod`
+        sync: false

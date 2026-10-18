@@ -82,6 +82,9 @@ export class StateManager {
           pitchHz: 165,
           isWearerVoice: true,
           wearerConfidence: 0.95,
+          speakerId: 'speaker_wearer',
+          speakerLabel: 'You (Wearer)',
+          diarizationConfidence: 0.96,
         }
       ],
       lastTranscribedText: 'Starting my day with AuraPet on my Even Reality glasses.',
