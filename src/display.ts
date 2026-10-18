@@ -157,6 +157,112 @@ export class DisplayManager {
     )
   }
 
+  /**
+   * Render the main AuraPet companion HUD on the G2 glasses
+   */
+  async renderPetHud(
+    petContent: string,
+    statsContent: string,
+    isStartup = false
+  ): Promise<number> {
+    const containers = [
+      // Left container: Pet ASCII Art + Stage
+      this.createText({
+        id: 1,
+        name: 'pet_display',
+        content: petContent,
+        x: 0,
+        y: 0,
+        width: 260,
+        height: 288,
+        interactive: true,
+        textColor: 4,
+      }),
+      // Right container: Mood, XP, Prompt & Controls
+      this.createText({
+        id: 2,
+        name: 'pet_stats',
+        content: statsContent,
+        x: 270,
+        y: 0,
+        width: 306,
+        height: 288,
+        interactive: true,
+        textColor: 4,
+      }),
+    ]
+
+    if (isStartup) {
+      return this.showStartupPage(containers)
+    } else {
+      return this.showPage(containers)
+    }
+  }
+
+  /**
+   * Render the Wellness Quest / Micro-Step HUD
+   */
+  async renderQuestHud(questTitle: string, questDetails: string): Promise<number> {
+    const containers = [
+      this.createText({
+        id: 1,
+        name: 'quest_title',
+        content: questTitle,
+        x: 0,
+        y: 0,
+        width: 576,
+        height: 70,
+        interactive: false,
+        textColor: 4,
+      }),
+      this.createText({
+        id: 2,
+        name: 'quest_body',
+        content: questDetails,
+        x: 0,
+        y: 80,
+        width: 576,
+        height: 208,
+        interactive: true,
+        textColor: 4,
+      }),
+    ]
+
+    return this.showPage(containers)
+  }
+
+  /**
+   * Render Breeding Sanctuary HUD
+   */
+  async renderBreedingHud(header: string, content: string): Promise<number> {
+    const containers = [
+      this.createText({
+        id: 1,
+        name: 'breeding_header',
+        content: header,
+        x: 0,
+        y: 0,
+        width: 576,
+        height: 70,
+        interactive: false,
+        textColor: 4,
+      }),
+      this.createText({
+        id: 2,
+        name: 'breeding_content',
+        content: content,
+        x: 0,
+        y: 80,
+        width: 576,
+        height: 208,
+        interactive: true,
+        textColor: 4,
+      }),
+    ]
+
+    return this.showPage(containers)
+  }
+
   /** Show the system exit confirmation dialog (required on root page double-tap) */
   exitApp(mode: 0 | 1 = 1): void {
     // mode 1 = system exit-confirmation dialog (required for QA)
@@ -169,3 +275,4 @@ export class DisplayManager {
     this.bridge.shutDownPageContainer(1)
   }
 }
+

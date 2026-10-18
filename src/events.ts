@@ -90,12 +90,36 @@ export class EventManager {
         return
       }
 
+      // Audio events from glasses microphone
+      const audioEvent = rawEvent.audioEvent
+      if (audioEvent) {
+        this.dispatchAudio(audioEvent)
+        return
+      }
+
       // System events (app lifecycle)
       const sysEvent = rawEvent.sysEvent
       if (sysEvent) {
         console.log('[EventManager] System event:', sysEvent)
       }
     })
+  }
+
+  private audioHandlers: Array<(event: any) => void> = []
+
+  /** Register a callback for incoming raw audio events from glasses mic */
+  onAudio(handler: (event: any) => void): void {
+    this.audioHandlers.push(handler)
+  }
+
+  private dispatchAudio(audioEvent: any): void {
+    for (const handler of this.audioHandlers) {
+      try {
+        handler(audioEvent)
+      } catch (err) {
+        console.error('[EventManager] Audio handler error:', err)
+      }
+    }
   }
 
   private parseEvent(rawEvent: { eventType?: number; containerID?: number; containerName?: string }): G2Event {

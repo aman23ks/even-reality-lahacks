@@ -1,153 +1,99 @@
-# Even Reality G2 — LA Hacks 2026 Template
+# ✨ AuraPet G2 — VoidPet for Even Reality Smart Glasses
+> **LA Hacks 2026** — Emotional wellness pet companion powered by continuous voice fingerprinting, vocal prosody emotion classification, and smart glasses heads-up display.
 
-A hackathon-ready template for building Even Reality G2 smart glasses apps with a backend API server.
+---
 
-## Architecture
+## 🌟 Concept & Vision
+
+**AuraPet** turns everyday conversations into a mindful, gamified companion on your **Even Reality G2 Smart Glasses** (576×288 monochrome display):
+1. **Continuous Voice Listening & Fingerprinting**:
+   - Streams raw audio from the G2 glasses microphone (`bridge.audioControl(true, AudioInputSource.Glasses)`).
+   - Calibrates your unique vocal fingerprint (pitch baseline $F_0$, variance, spectral centroid) so it **only reacts to YOUR voice** and ignores background noise or other people talking around you.
+2. **Real-time Vocal Emotion Recognition**:
+   - Detects emotional states from your natural speech: **Joy ☀️, Calm 💧, Anxiety 🌪️, Melancholy 🌙, Frustration ⚡, and Curiosity ✨**.
+3. **VoidPet-Style Evolution & Leveling**:
+   - Your companion pet (*Solispark*, *Lumidrop*, *Zephyr*, *Gloomwing*, *Pyre*) feeds on emotional presence.
+   - Grows through stages: **Egg → Wisp → Juvenile → Ascended Guardian**.
+4. **Actionable Wellness Quests ("Steps to get points & get happy")**:
+   - Dynamically prescribes bite-sized micro-steps on your glasses HUD (e.g. *Box Breathing 4-7-8*, *Shoulder & Jaw Release*, *Gratitude Prompts*).
+   - Completing micro-steps awards **XP**, boosts happiness, and synthesizes **Emotional Essence**.
+5. **Elemental Breeding Lab**:
+   - Fuse two emotional spirits (e.g. Joy + Calm) using Essence points to hatch legendary hybrid creatures like **Serenidrake**!
+
+---
+
+## 🕶️ G2 Glasses HUD Navigation (576×288 Mono Display)
+
+| Gesture on G2 Temple | Action on HUD |
+|---|---|
+| **Single Tap** | **Pet companion** (+Happiness/cheer) / **Complete Quest** / **Hatch Egg** |
+| **Swipe Forward** | Cycle screen forward: `Pet HUD` → `Wellness Quest` → `Breeding Lab` |
+| **Swipe Backward** | Cycle screen backward: `Breeding Lab` → `Wellness Quest` → `Pet HUD` |
+| **Double Tap** | Return to Pet HUD or trigger Even OS exit confirmation |
+
+---
+
+## 🏗️ Architecture
 
 ```
-┌──────────────┐   HTTP/JSON    ┌──────────────────┐
-│  Express     │ ◄────────────► │  Vite + TS       │
-│  Backend     │                │  (phone WebView) │
-│  (laptop)    │                │                  │
-└──────────────┘                └────────┬─────────┘
-                                         │ SDK Bridge
-                                         ▼
-                                ┌──────────────────┐
-                                │  Even G2 Glasses  │
-                                │  576×288 mono     │
-                                └──────────────────┘
+┌─────────────────────────────────┐
+│     Even Reality G2 Glasses     │
+│   • 576×288 Monochrome OLED     │
+│   • Temple Touchpad Gestures    │
+│   • Directional Microphone      │
+└──────────────┬──────────────────┘
+               │ Bluetooth Low Energy / Even SDK Bridge
+               ▼
+┌─────────────────────────────────┐
+│  Phone WebView / Companion UI   │  (http://192.168.13.91:5173)
+│   • Live G2 HUD Mirror          │
+│   • Voice Isolation & Pitch F0  │
+│   • VoidPet Status & Evolution  │
+│   • Wellness Quests Checklist   │
+│   • Breeding Sanctuary          │
+└──────────────┬──────────────────┘
+               │ HTTP / JSON API
+               ▼
+┌─────────────────────────────────┐
+│  Express Backend Server         │  (http://192.168.13.91:3001)
+│   • Voice Profile Store         │
+│   • Emotion Prosody Engine      │
+│   • AI Coach (OpenAI/Groq/Heur) │
+│   • Essence & Breeding Sync     │
+└─────────────────────────────────┘
 ```
 
-**Frontend** (`src/`): Vite + TypeScript app running in the phone's WebView. Uses the Even Hub SDK to render UI on the glasses and handle input events.
+---
 
-**Backend** (`server/`): Express API server running on your laptop. Handles API keys, external service calls (OpenAI, etc.), and any server-side logic.
+## 🚀 Quick Start
 
-## Quick Start
-
-### 1. Install dependencies
+### 1. Install Dependencies
 ```bash
 npm install
 ```
 
-### 2. Set up environment
+### 2. Configure Environment (`.env`)
 ```bash
 cp .env.example .env
-# Edit .env with your API keys and your laptop's LAN IP
+# Ensure VITE_API_URL points to your laptop LAN IP (e.g., http://192.168.13.91:3001)
+# Optional: Add OPENAI_API_KEY or GROQ_API_KEY for dynamic LLM coaching
 ```
 
-### 3. Run development servers
+### 3. Launch Frontend + Backend
 ```bash
-# Both frontend + backend together:
 npm run dev:all
-
-# Or separately:
-npm run dev          # Frontend (Vite) on :5173
-npm run dev:backend  # Backend (Express) on :3001
 ```
+- **Phone Companion Dashboard**: `http://localhost:5173` (or `http://192.168.13.91:5173`)
+- **Backend API Server**: `http://localhost:3001`
 
-### 4. Test on the simulator
-```bash
-npm run sim
-# Then open the URL shown in your browser
-```
+### 4. Test on G2 Glasses
+1. Open the **Even Realities** app on your phone.
+2. Tap **Even Hub** tab → **Scan QR**.
+3. Scan the QR code for `http://192.168.13.91:5173` (or run `npm run qr`).
+4. Wear your glasses! Tap the temple to pet your companion, speak naturally, and watch it evolve!
 
-### 5. Test on real G2 glasses
-1. Get your laptop's LAN IP: `ifconfig | grep "inet " | grep -v 127.0.0.1`
-2. Generate a QR code pointing to `http://<your-ip>:5173`
-3. Scan the QR in the Even Realities phone app → Scan QR
-4. Your app should render on the G2!
-
-### 6. Package for submission
+### 5. Package App for Submission
 ```bash
 npm run package
-# Creates an .ehpk file in the project root
-# Upload it to the EvenHub developer portal
+# Generates stamped `g2-app.ehpk` ready for Even Hub deployment
 ```
-
-## Project Structure
-
-```
-├── src/
-│   ├── main.ts         ← Entry point
-│   ├── app.ts          ← Main app logic (START HERE)
-│   ├── display.ts      ← G2 display wrapper
-│   ├── events.ts       ← G2 input event handler
-│   ├── api.ts          ← Backend API client
-│   ├── state.ts        ← State management
-│   └── vite-env.d.ts   ← TypeScript env types
-├── server/
-│   └── index.ts        ← Express backend server
-├── public/
-│   └── icon.png        ← App icon (24×24 greyscale)
-├── app.json            ← Even Hub manifest
-├── index.html          ← Vite HTML entry
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-└── tsconfig.server.json
-```
-
-## G2 Display Specs
-
-- **Resolution**: 576 × 288 pixels per eye
-- **Color**: Monochrome green (no RGB)
-- **No camera, no speaker**
-- **Input**: Temple touchpad (tap, double-tap, long press, swipe forward/backward)
-- **Microphone**: Available for voice input
-
-## Key SDK Concepts
-
-| Concept | Description |
-|---------|-------------|
-| `waitForEvenAppBridge()` | **Always** await this first before any SDK call |
-| `TextContainerProperty` | Renders text on the glasses display |
-| `ImageContainerProperty` | Renders greyscale images |
-| `isEventCapture: 1` | Required on containers that need to receive tap events |
-| `createStartUpPageContainer` | Renders the initial (root) page |
-| `createPageContainer` | Navigates to a new page |
-| `textContainerUpgrade` | Updates text in-place without full re-render |
-| `shutDownPageContainer(1)` | Shows exit dialog (required on root page double-tap) |
-| `onEvenHubEvent` | Receives all input events from the glasses |
-
-## Input Events
-
-| Event | G2 Gesture |
-|-------|-----------|
-| `CLICK_EVENT` | Single tap |
-| `DOUBLE_CLICK_EVENT` | Double tap |
-| `LONG_PRESS_EVENT` | Long press |
-| `SLIDE_FORWARD_EVENT` | Swipe forward |
-| `SLIDE_BACKWARD_EVENT` | Swipe backward |
-
-## Adding API Integrations
-
-1. Add your API key to `.env`
-2. Add the domain to `app.json` → `network` array
-3. Create your endpoint in `server/index.ts`
-4. Call it from the frontend via `src/api.ts`
-
-## Useful Commands
-
-```bash
-npm run dev          # Start Vite dev server
-npm run dev:backend  # Start Express backend
-npm run dev:all      # Start both
-npm run build        # Build for production
-npm run package      # Build + create .ehpk
-npm run sim          # Launch the Even simulator
-```
-
-## Important Notes
-
-- **Use LAN IP, not localhost**: The phone WebView can't reach `localhost` on your laptop. Use your LAN IP (e.g., `192.168.x.x`).
-- **CORS matters**: The `app.json` network whitelist doesn't bypass CORS. Your backend must send proper CORS headers.
-- **Double-tap exit**: The root page must show the system exit dialog on double-tap. This is required for QA.
-- **Keep text short**: The 576×288 display is small. Keep messages brief.
-
-## Resources
-
-- [Even Hub Docs](https://hub.evenrealities.com/docs/get-started/overview)
-- [SDK Package](https://www.npmjs.com/package/@evenrealities/even_hub_sdk)
-- [Template Repo](https://github.com/even-realities/evenhub-templates)
-- [LA Hacks Challenge](https://evenrealities-lahacks.vercel.app/)
-- [Discord](https://discord.gg/Y4jHMCU4sv)

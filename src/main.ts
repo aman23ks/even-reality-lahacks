@@ -1,17 +1,20 @@
 /**
- * main.ts — Even Reality G2 App Entry Point
+ * main.ts — AuraPet G2 App Entry Point
  * 
- * This is the main entry point that runs in the phone's WebView.
- * It initializes the SDK bridge, sets up the display, and handles
- * all input events from the G2 glasses.
- * 
- * Architecture:
- *   Your code here (WebView) → SDK Bridge → Even App → Bluetooth → G2 Glasses
- *   G2 input events travel the reverse path back to your onEvenHubEvent callback.
+ * Boots:
+ *   1. Even Reality G2 Smart Glasses Bridge Controller (AuraPetApp)
+ *   2. Mobile WebView & Browser Companion Dashboard (renderCompanionDashboard)
  */
 
-import { EvenG2App } from './app'
+import { AuraPetApp } from './app'
+import { renderCompanionDashboard } from './companion/ui'
 
-// Boot the app
-const app = new EvenG2App()
-app.start().catch(console.error)
+const app = new AuraPetApp()
+
+// Render the mobile companion dashboard immediately
+renderCompanionDashboard(app)
+
+// Start the G2 SDK bridge and continuous voice listening
+app.start().catch((err) => {
+  console.warn('[main] App start error (running in local simulation mode):', err)
+})

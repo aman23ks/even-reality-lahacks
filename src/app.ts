@@ -1,235 +1,390 @@
 /**
- * app.ts — Main Application Logic
+ * src/app.ts — AuraPet G2 Main Application Controller
  * 
- * This is the heart of your Even Reality G2 app. It ties together:
- *   - SDK bridge initialization (waitForEvenAppBridge)
- *   - Display rendering (DisplayManager)
- *   - Input event handling (EventManager)
- *   - Backend API calls (ApiClient)
- *   - State management (StateManager)
- * 
- * ┌─────────────────────────────────────────────────────────────┐
- * │  MODIFY THIS FILE to build your hackathon project!          │
- * │                                                             │
- * │  The template shows a simple tap-counter with backend call. │
- * │  Replace the screens and event handlers with your idea.     │
- * └─────────────────────────────────────────────────────────────┘
+ * Pairs Even Reality G2 smart glasses with VoidPet-style emotional companions:
+ *   - Continuous voice listening & voice fingerprinting
+ *   - Prosody & acoustic emotion classification
+ *   - Real-time Pet HUD rendering (576x288 monochrome display)
+ *   - Micro-action wellness quests & breeding sanctuary
  */
 
-import { waitForEvenAppBridge } from '@evenrealities/even_hub_sdk'
+import { waitForEvenAppBridge, type EvenAppBridge } from '@evenrealities/even_hub_sdk'
 import { DisplayManager } from './display'
 import { EventManager } from './events'
 import { ApiClient } from './api'
 import { StateManager } from './state'
-import type { AppState } from './state'
+import { VoiceAnalyzer } from './audio/voiceAnalyzer'
+import { PetManager } from './game/petManager'
+import { getPetAscii, getEmotionEmoji } from './game/petAscii'
+import type { ActiveHudScreen } from './types/pet'
 
-export class EvenG2App {
+export class AuraPetApp {
+  private bridge!: EvenAppBridge
   private display!: DisplayManager
   private events!: EventManager
   private api: ApiClient
   private state: StateManager
+  private petManager: PetManager
+  private voiceAnalyzer: VoiceAnalyzer
+
+  private isStarted = false
+  private startupRendered = false
+  private lastRenderTime = 0
 
   constructor() {
     this.api = new ApiClient()
     this.state = new StateManager()
+    this.petManager = new PetManager()
+    this.voiceAnalyzer = new VoiceAnalyzer()
   }
 
-  /** Initialize the SDK bridge and start the app */
+  getStateManager(): StateManager {
+    return this.state
+  }
+
+  getPetManager(): PetManager {
+    return this.petManager
+  }
+
+  getVoiceAnalyzer(): VoiceAnalyzer {
+    return this.voiceAnalyzer
+  }
+
+  getApiClient(): ApiClient {
+    return this.api
+  }
+
+  /** Initialize the Even Hub SDK bridge and start AuraPet */
   async start(): Promise<void> {
-    console.log('[App] Waiting for Even App Bridge...')
+    if (this.isStarted) return
+    this.isStarted = true
 
-    // ──────────────────────────────────────────────────────────
-    // CRITICAL: Always await this before calling any SDK method.
-    // In the simulator it resolves immediately.
-    // On real hardware it waits for the WebView bridge.
-    // ──────────────────────────────────────────────────────────
-    const bridge = await waitForEvenAppBridge()
-    console.log('[App] Bridge ready!')
+    console.log('[AuraPet] Connecting to Even Reality Bridge...')
+    this.bridge = await waitForEvenAppBridge()
+    console.log('[AuraPet] G2 Bridge Connected!')
 
-    // Initialize managers
-    this.display = new DisplayManager(bridge)
-    this.events = new EventManager(bridge)
+    this.display = new DisplayManager(this.bridge)
+    this.events = new EventManager(this.bridge)
+    this.voiceAnalyzer.setBridge(this.bridge)
 
-    // Set up event handlers
-    this.setupEventHandlers()
+    // Sync initial state
+    this.state.update({
+      activePet: this.petManager.getActivePet(),
+      allPets: this.petManager.getAllPets(),
+      activeQuests: this.petManager.getActiveQuests(),
+    })
 
-    // Listen for state changes to re-render
-    this.state.onChange((newState) => this.render(newState))
+    // Setup G2 Input and Audio handlers
+    this.setupGlassesInputHandlers()
+    this.setupAudioAndEmotionPipeline()
 
-    // Render the initial home screen
-    await this.renderHomeScreen()
+    // Render Initial Pet HUD to G2 Glasses
+    await this.renderHudScreen(true)
 
-    // Optionally check backend health
-    this.checkBackend()
+    // Check backend health & sync voice profile
+    this.checkBackendAndSync()
+
+    // Start continuous voice listening
+    await this.startListening()
   }
 
-  // ── Event Handlers ──────────────────────────────────────────
+  /** Setup Touchpad gestures from G2 temple */
+  private setupGlassesInputHandlers(): void {
+    // 1. Single Tap on touchpad
+    this.events.on('tap', async () => {
+      const current = this.state.get().currentScreen
+      console.log(`[AuraPet] G2 Tap on screen: ${current}`)
 
-  private setupEventHandlers(): void {
-    // Single tap → depends on current screen
-    this.events.on('tap', async (event) => {
-      console.log('[App] Tap on container:', event.containerId)
-      const screen = this.state.get().currentScreen
-
-      switch (screen) {
-        case 'home':
-          await this.handleHomeTap()
-          break
-        case 'result':
-          // Tap on result screen → go back to home
-          this.state.update({ currentScreen: 'home' })
-          await this.renderHomeScreen()
-          break
-        case 'error':
-          // Tap on error → go back to home
-          this.state.update({ currentScreen: 'home', errorMessage: '' })
-          await this.renderHomeScreen()
-          break
+      if (current === 'pet') {
+        // Pet the companion! Boosts happiness and triggers cheer
+        const activePet = this.petManager.getActivePet()
+        activePet.happiness = Math.min(100, activePet.happiness + 5)
+        this.state.update({
+          activePet,
+          coachMessage: `You petted ${activePet.name}! ❤️ (+5 happiness)`,
+        })
+        await this.renderHudScreen()
+      } else if (current === 'quest') {
+        // Complete the first pending wellness quest!
+        const quests = this.petManager.getActiveQuests()
+        const pending = quests.find((q) => !q.completed)
+        if (pending) {
+          const res = this.petManager.completeQuest(pending.id)
+          const cheer = res.leveledUp
+            ? `LEVEL UP! ${res.pet.name} is now Lvl ${res.pet.level}! 🎉`
+            : `Quest Complete! +${pending.rewardXp} XP 🌟`
+          this.state.update({
+            activePet: res.pet,
+            activeQuests: this.petManager.getActiveQuests(),
+            coachMessage: cheer,
+          })
+          await this.renderHudScreen()
+        }
+      } else if (current === 'breeding') {
+        // Try to hatch ready egg
+        const hatched = this.petManager.hatchEgg()
+        if (hatched) {
+          this.state.update({
+            activePet: hatched,
+            allPets: this.petManager.getAllPets(),
+            coachMessage: `Egg Hatched! Welcome ${hatched.name}! 🐣✨`,
+          })
+          await this.renderHudScreen()
+        }
       }
     })
 
-    // Double tap → exit app (required by Even QA)
+    // 2. Swipe Forward -> Cycle screens (Pet -> Quest -> Breeding)
+    this.events.on('swipe_forward', async () => {
+      const screens: ActiveHudScreen[] = ['pet', 'quest', 'breeding']
+      const current = this.state.get().currentScreen
+      const idx = screens.indexOf(current)
+      const next = screens[(idx + 1) % screens.length]
+      this.state.update({ currentScreen: next })
+      await this.renderHudScreen()
+    })
+
+    // 3. Swipe Backward -> Cycle screens backwards
+    this.events.on('swipe_backward', async () => {
+      const screens: ActiveHudScreen[] = ['pet', 'quest', 'breeding']
+      const current = this.state.get().currentScreen
+      const idx = screens.indexOf(current)
+      const prev = screens[(idx - 1 + screens.length) % screens.length]
+      this.state.update({ currentScreen: prev })
+      await this.renderHudScreen()
+    })
+
+    // 4. Double Tap -> Exit app confirmation (Even App Store requirement)
     this.events.on('double_tap', () => {
       const screen = this.state.get().currentScreen
-
-      if (screen === 'home') {
-        // On the root page, show exit confirmation
+      if (screen === 'pet') {
         this.display.exitApp(1)
       } else {
-        // On sub-pages, go back
-        this.state.update({ currentScreen: 'home' })
-        this.renderHomeScreen()
+        this.state.update({ currentScreen: 'pet' })
+        this.renderHudScreen()
       }
     })
 
-    // Long press → call the backend API
-    this.events.on('long_press', async () => {
-      console.log('[App] Long press → calling backend')
-      await this.callBackend()
-    })
-
-    // Swipe forward/backward → cycle through screens
-    this.events.on('swipe_forward', async () => {
-      const count = this.state.get().tapCount + 1
-      this.state.update({ tapCount: count })
-      await this.display.updateText(1, 'main',
-        `Even Reality G2\n\nTap count: ${count}\n\nLong press → API call\nDouble tap → exit`
-      )
-    })
-
-    this.events.on('swipe_backward', async () => {
-      const count = Math.max(0, this.state.get().tapCount - 1)
-      this.state.update({ tapCount: count })
-      await this.display.updateText(1, 'main',
-        `Even Reality G2\n\nTap count: ${count}\n\nLong press → API call\nDouble tap → exit`
-      )
-    })
-  }
-
-  // ── Screen Renderers ────────────────────────────────────────
-
-  private async renderHomeScreen(): Promise<void> {
-    const { tapCount } = this.state.get()
-
-    const mainText = this.display.createText({
-      id: 1,
-      name: 'main',
-      content: `Even Reality G2\n\nTap count: ${tapCount}\n\nLong press → API call\nDouble tap → exit`,
-      interactive: true,
-    })
-
-    await this.display.showStartupPage([mainText])
-  }
-
-  private async renderProcessingScreen(): Promise<void> {
-    const mainText = this.display.createText({
-      id: 1,
-      name: 'main',
-      content: 'Processing...\n\nCalling backend API',
-      interactive: false,
-    })
-
-    await this.display.showPage([mainText])
-  }
-
-  private async renderResultScreen(result: string): Promise<void> {
-    const mainText = this.display.createText({
-      id: 1,
-      name: 'main',
-      content: `Result:\n\n${result}\n\nTap to go back`,
-      interactive: true,
-    })
-
-    await this.display.showPage([mainText])
-  }
-
-  private async renderErrorScreen(error: string): Promise<void> {
-    const mainText = this.display.createText({
-      id: 1,
-      name: 'main',
-      content: `Error:\n\n${error}\n\nTap to go back`,
-      interactive: true,
-    })
-
-    await this.display.showPage([mainText])
-  }
-
-  // ── Actions ─────────────────────────────────────────────────
-
-  private async handleHomeTap(): Promise<void> {
-    const count = this.state.get().tapCount + 1
-    this.state.update({ tapCount: count })
-
-    await this.display.updateText(1, 'main',
-      `Even Reality G2\n\nTap count: ${count}\n\nLong press → API call\nDouble tap → exit`
-    )
-  }
-
-  private async callBackend(): Promise<void> {
-    this.state.update({ currentScreen: 'processing', isProcessing: true })
-    await this.renderProcessingScreen()
-
-    try {
-      const response = await this.api.processText(
-        `Hello from G2! Tap count: ${this.state.get().tapCount}`
-      )
-
-      if (response.success && response.data) {
-        this.state.update({
-          currentScreen: 'result',
-          lastResult: response.data.result,
-          isProcessing: false,
-        })
-        await this.renderResultScreen(response.data.result)
-      } else {
-        throw new Error(response.error ?? 'Unknown API error')
+    // 5. Incoming Audio PCM frames from glasses microphone
+    this.events.onAudio((audioEvent) => {
+      if (audioEvent && audioEvent.audioPcm) {
+        this.voiceAnalyzer.handleSdkAudioEvent(audioEvent.audioPcm, audioEvent.speakerRole)
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
+    })
+  }
+
+  /** Continuous listening pipeline & emotion recognition */
+  private setupAudioAndEmotionPipeline(): void {
+    let lastMoodChange = 0
+
+    this.voiceAnalyzer.onEmotion(async (reading) => {
+      // Only process if user voice confidence is verified
+      if (!reading.isUserVoice) return
+
+      // Apply to Pet Manager
+      const { leveledUp } = this.petManager.applyVoiceEmotion(reading)
+      const pet = this.petManager.getActivePet()
+
+      let coachMsg = this.state.get().coachMessage
+      const now = Date.now()
+
+      // If mood changed or 12 seconds elapsed, query AI coach / tips
+      if (now - lastMoodChange > 12000) {
+        lastMoodChange = now
+        try {
+          const res = await this.api.getCoachSuggestion(reading.primary, pet.name, pet.level)
+          if (res.success && res.data?.suggestion) {
+            coachMsg = res.data.suggestion
+          }
+        } catch {
+          // fallback stays
+        }
+      }
+
+      if (leveledUp) {
+        coachMsg = `★ EVOLUTION! ${pet.name} is now Lvl ${pet.level}! ★`
+      }
+
       this.state.update({
-        currentScreen: 'error',
-        errorMessage: msg,
-        isProcessing: false,
+        activePet: pet,
+        lastReading: reading,
+        coachMessage: coachMsg,
+        activeQuests: this.petManager.getActiveQuests(),
       })
-      await this.renderErrorScreen(msg)
+
+      // Throttle G2 HUD re-renders to at most once per 1.5s
+      if (now - this.lastRenderTime > 1500) {
+        this.lastRenderTime = now
+        await this.renderHudScreen()
+      }
+    })
+  }
+
+  /** Start continuous listening */
+  async startListening(): Promise<boolean> {
+    const ok = await this.voiceAnalyzer.startListening()
+    this.state.update({ isListening: ok })
+    return ok
+  }
+
+  /** Stop continuous listening */
+  async stopListening(): Promise<void> {
+    await this.voiceAnalyzer.stopListening()
+    this.state.update({ isListening: false })
+  }
+
+  /** Trigger Voice Fingerprint Calibration */
+  async startCalibration(): Promise<void> {
+    this.state.update({ isCalibrating: true, currentScreen: 'calibrate' })
+    this.voiceAnalyzer.startCalibration()
+    await this.renderHudScreen()
+
+    // 5-second calibration window
+    setTimeout(async () => {
+      const fp = this.voiceAnalyzer.finishCalibration()
+      this.state.update({
+        isCalibrating: false,
+        voiceEnrolled: true,
+        currentScreen: 'pet',
+        coachMessage: `Voice enrolled! Baseline pitch: ${fp.medianPitchHz} Hz 🎯`,
+      })
+      // Sync with server
+      await this.api.enrollVoice({
+        medianPitchHz: fp.medianPitchHz,
+        pitchVariance: fp.pitchVariance,
+        spectralCentroid: fp.spectralCentroid,
+      })
+      await this.renderHudScreen()
+    }, 5000)
+  }
+
+  /** Render the current screen on the G2 Smart Glasses HUD (576x288 px) */
+  async renderHudScreen(isStartup = false): Promise<void> {
+    const s = this.state.get()
+    const pet = s.activePet
+    const screen = s.currentScreen
+
+    switch (screen) {
+      case 'pet': {
+        const ascii = getPetAscii(pet.speciesId, pet.stage)
+        const moodBadge = getEmotionEmoji(pet.dominantMood)
+        const reading = s.lastReading
+
+        // Left Container Content: Art + Species
+        const leftText = [
+          `[ ${pet.name} ]`,
+          `Lvl ${pet.level} ${pet.stage.toUpperCase()}`,
+          '',
+          ascii,
+          '',
+          `Mood: ${moodBadge}`,
+        ].join('\n')
+
+        // Right Container Content: Stats + Micro Advice + Controls
+        const happinessBar = '■'.repeat(Math.floor(pet.happiness / 20)) + '□'.repeat(5 - Math.floor(pet.happiness / 20))
+        const xpPercent = Math.min(100, Math.round((pet.xp / pet.xpToNextLevel) * 100))
+
+        const rightText = [
+          `HP: [${happinessBar}] ${pet.happiness}%`,
+          `XP: ${pet.xp}/${pet.xpToNextLevel} (${xpPercent}%)`,
+          `Pitch: ${reading ? reading.pitchHz + ' Hz' : '--'}`,
+          '---------------------',
+          `"${s.coachMessage.slice(0, 55)}"`,
+          '---------------------',
+          '>> [Tap] Pet companion',
+          '>> [Swipe] Quests',
+        ].join('\n')
+
+        if (isStartup || !this.startupRendered) {
+          await this.display.renderPetHud(leftText, rightText, true)
+          this.startupRendered = true
+        } else {
+          // Fast in-place container text upgrade
+          await this.display.updateText(1, 'pet_display', leftText)
+          await this.display.updateText(2, 'pet_stats', rightText)
+        }
+        break
+      }
+
+      case 'quest': {
+        const quests = s.activeQuests
+        const active = quests.find((q) => !q.completed) || quests[0]
+
+        const title = `[WELLNESS QUEST] +${active ? active.rewardXp : 0} XP`
+        const body = active
+          ? [
+              active.title,
+              '',
+              `Action: ${active.microStep}`,
+              `Reward: +${active.rewardEssence} ${active.targetEmotion.toUpperCase()} Essence`,
+              '',
+              '---------------------------------------',
+              '>> [TAP] Complete Step  |  [SWIPE] Return',
+            ].join('\n')
+          : 'All quests completed! Great job breathing and staying present.'
+
+        await this.display.renderQuestHud(title, body)
+        break
+      }
+
+      case 'breeding': {
+        const pair = this.petManager.getBreedingPair()
+        const essence = this.petManager.getEssencePoints()
+
+        const header = '[BREEDING SANCTUARY & ESSENCE]'
+        const content = pair
+          ? [
+              `Incubating Egg: ${pair.eggSpecies.toUpperCase()}`,
+              `Parents: ${pair.parentA.name} + ${pair.parentB.name}`,
+              `Progress: ${pair.currentEssence}/${pair.hatchCostEssence} Essence`,
+              pair.isReadyToHatch ? '★ READY TO HATCH! [TAP] NOW! ★' : 'Earn Calm/Joy Essence to hatch.',
+              '',
+              '>> [TAP] Hatch  |  [SWIPE] Pet HUD',
+            ].join('\n')
+          : [
+              'Essence Vault:',
+              `☀️ Joy: ${essence.joy}  |  💧 Calm: ${essence.calm}`,
+              `✨ Curiosity: ${essence.curiosity}  |  🌪️ Wind: ${essence.anxiety}`,
+              '',
+              'Keep speaking in positive cadence or complete quests to unlock breeding!',
+              '>> [SWIPE] Pet HUD',
+            ].join('\n')
+
+        await this.display.renderBreedingHud(header, content)
+        break
+      }
+
+      case 'calibrate': {
+        const title = '[VOICE CALIBRATION]'
+        const body = [
+          'Calibrating your unique vocal fingerprint...',
+          '',
+          'Please speak naturally for 5 seconds.',
+          '(e.g., "Hello AuraPet, this is my natural voice")',
+          '',
+          '>> The G2 glasses will filter out other people\'s voices!',
+        ].join('\n')
+
+        await this.display.renderQuestHud(title, body)
+        break
+      }
     }
   }
 
-  private async checkBackend(): Promise<void> {
-    try {
-      const health = await this.api.healthCheck()
-      console.log('[App] Backend health:', health)
-    } catch {
-      console.warn('[App] Backend not reachable — that\'s okay for now')
+  /** Check backend server connectivity */
+  private async checkBackendAndSync(): Promise<void> {
+    const health = await this.api.healthCheck()
+    if (health.success) {
+      console.log('[AuraPet] Backend connected:', health.data)
+      this.state.update({ backendOnline: true })
+
+      // Fetch server voice profile
+      const prof = await this.api.getVoiceProfile()
+      if (prof.success && prof.data?.profile?.enrolled) {
+        this.state.update({ voiceEnrolled: true })
+      }
+    } else {
+      console.warn('[AuraPet] Backend unreachable, operating in autonomous edge mode')
     }
-  }
-
-  // ── Render dispatcher (called on state changes) ────────────
-
-  private async render(state: AppState): Promise<void> {
-    // This is called whenever state changes.
-    // For simple apps, the event handlers already call render methods directly.
-    // Use this for more complex state-driven rendering if needed.
-    console.log('[App] State changed:', state.currentScreen)
   }
 }

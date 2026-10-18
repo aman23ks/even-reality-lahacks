@@ -1,63 +1,73 @@
 /**
- * state.ts — Application State Manager
- * 
- * Simple state management for navigating between pages/screens
- * on the G2 glasses. The display is small (576×288) so apps
- * typically have a few distinct screens they navigate between.
+ * src/state.ts — AuraPet State Manager
  */
 
-/** Define your app's possible screens here */
-export type AppScreen = 'home' | 'detail' | 'processing' | 'result' | 'error'
+import type { Pet, EmotionReading, WellnessQuest, ActiveHudScreen } from './types/pet'
 
-/** Application state */
 export interface AppState {
-  currentScreen: AppScreen
-  tapCount: number
-  lastResult: string
-  isProcessing: boolean
-  errorMessage: string
+  currentScreen: ActiveHudScreen
+  activePet: Pet
+  allPets: Pet[]
+  lastReading?: EmotionReading
+  isListening: boolean
+  isCalibrating: boolean
+  calibrationProgress: number
+  voiceEnrolled: boolean
+  activeQuests: WellnessQuest[]
+  coachMessage: string
+  backendOnline: boolean
+  lastHudSync: number
 }
 
-/**
- * StateManager — reactive state container.
- * 
- * Usage:
- *   const state = new StateManager()
- *   state.onChange((newState) => { ... })
- *   state.update({ tapCount: state.get().tapCount + 1 })
- */
 export class StateManager {
   private state: AppState
   private listeners: Array<(state: AppState) => void> = []
 
   constructor(initial?: Partial<AppState>) {
     this.state = {
-      currentScreen: 'home',
-      tapCount: 0,
-      lastResult: '',
-      isProcessing: false,
-      errorMessage: '',
+      currentScreen: 'pet',
+      activePet: {
+        id: 'pet_starter_1',
+        name: 'Solispark',
+        speciesId: 'solispark',
+        speciesName: 'Joy Wisp',
+        element: 'joy',
+        stage: 'wisp',
+        level: 2,
+        xp: 45,
+        xpToNextLevel: 100,
+        happiness: 85,
+        hunger: 30,
+        dominantMood: 'joy',
+        generation: 1,
+        unlockedAt: Date.now(),
+      },
+      allPets: [],
+      isListening: false,
+      isCalibrating: false,
+      calibrationProgress: 0,
+      voiceEnrolled: false,
+      activeQuests: [],
+      coachMessage: 'Speak naturally to bond with your pet...',
+      backendOnline: false,
+      lastHudSync: Date.now(),
       ...initial,
     }
   }
 
-  /** Get the current state (readonly snapshot) */
   get(): Readonly<AppState> {
     return { ...this.state }
   }
 
-  /** Update state and notify listeners */
   update(partial: Partial<AppState>): void {
     this.state = { ...this.state, ...partial }
     this.notify()
   }
 
-  /** Subscribe to state changes */
   onChange(listener: (state: AppState) => void): () => void {
     this.listeners.push(listener)
-    // Return unsubscribe function
     return () => {
-      this.listeners = this.listeners.filter(l => l !== listener)
+      this.listeners = this.listeners.filter((l) => l !== listener)
     }
   }
 
