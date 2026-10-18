@@ -37,7 +37,10 @@ if (fs.existsSync(DIST)) app.use(express.static(DIST))
 const APP_KEY = process.env.APP_KEY || ''
 const hits = new Map<string, number[]>()
 function guard(req: express.Request, res: express.Response, next: express.NextFunction): void {
-  if (APP_KEY && req.header('x-aurapet-key') !== APP_KEY) {
+  // The web app served by this same server (e.g. https://<host>/ for browser demos) is allowed without
+  // the key; everything else (the .ehpk on phones) must send it. Rate limiting applies to both.
+  const sameOrigin = req.header('origin') === `${req.protocol}://${req.header('host')}`
+  if (APP_KEY && !sameOrigin && req.header('x-aurapet-key') !== APP_KEY) {
     res.status(401).json({ error: 'bad app key' })
     return
   }
