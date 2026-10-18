@@ -410,11 +410,15 @@ export class Aura {
         }
         break
       case 'idle':
-        // Long-press = start (or restart) the judge demo, straight from the glasses.
-        // Long-press while the pet card is open = voice check.
+        // A 1s long-press opens the G2 system menu, so app gestures avoid it:
+        //   tap (pet card) → swipe = start the judge tour · tap (pet card) → long-press = voice check (if delivered)
         if (t === 'long_press') {
           if (now < this.cardUntil && !this.judgeMode) this.startVoiceCheck()
-          else this.startJudgeDemo()
+          break
+        }
+        if ((t === 'swipe_forward' || t === 'swipe_backward') && now < this.cardUntil && !this.judgeMode) {
+          this.cardUntil = 0
+          this.startJudgeDemo()
           break
         }
         if (t === 'double_tap' && this.judgeMode) {
@@ -1228,7 +1232,7 @@ export class Aura {
         if (d.judgeMode) return this.judgeView(base, stage, snap.weather)
         if (now < this.cardUntil) {
           const body = `${pet.name}  -  ${stageLabel(stage)}\nSky: ${snap.weather}\n\nRecoveries: ${pet.recoveries}\n${toNext}`
-          return cardFrame(base(), body, this.pending ? 'tap: start a reset' : 'tap: close  hold: voice check')
+          return cardFrame(base(), body, this.pending ? 'tap: start a reset' : 'swipe: judge tour')
         }
         const whisper = now < this.whisperUntil
         // Quiet lens: while you work, the lens is empty. It reappears briefly when the sky changes.

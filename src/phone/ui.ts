@@ -153,7 +153,7 @@ export function mountPhoneUi(d: PhoneDeps): void {
 
     <div class="card">
       <h2>Judge mode</h2>
-      <div class="sub" style="margin-bottom:10px">A guided ~3-minute tour for someone trying G2 for the first time: the lens says what to do at each step, every feature shows up once, and Mochi reaches <b>Zenith in 3 bounce-backs</b>. Swipe on the glasses (or Skip step) to skip a step. <b>On the glasses: long-press the temple</b> to start or restart the tour.</div>
+      <div class="sub" style="margin-bottom:10px">A guided ~3-minute tour for someone trying G2 for the first time: the lens says what to do at each step, every feature shows up once, and Mochi reaches <b>Zenith in 3 bounce-backs</b>. Swipe on the glasses (or Skip step) to skip a step. <b>On the glasses: tap (pet card), then swipe</b> to start the tour.</div>
       <div class="row" style="gap:8px">
         <button class="btn primary" id="judgeBtn">Start judge demo</button>
         <button class="btn" id="judgeSkip" style="display:none">Skip step</button>
@@ -180,7 +180,7 @@ export function mountPhoneUi(d: PhoneDeps): void {
       <div style="margin-top:12px"><div class="sub" style="margin-bottom:6px">Try it by typing (same pipeline as speech). Start a line with <b>them:</b> to play the other person in a conversation.</div>
         <div class="row"><input type="text" id="typed" placeholder="you: this deadline is impossible · them: start with &quot;them:&quot;"><button class="btn" id="send">Send</button></div>
       </div>
-      <div class="toggle" style="margin-top:6px"><div><div>Voice check</div><div class="sub" id="voiceSub">Teaches AuraPet how the glasses hear <i>your</i> voice, so only you count. On the glasses: tap to open the pet card, then long-press.</div></div><button class="btn" id="voiceBtn">Start</button></div>
+      <div class="toggle" style="margin-top:6px"><div><div>Voice check</div><div class="sub" id="voiceSub">Teaches AuraPet how the glasses hear <i>your</i> voice, so only you count. Start it here (on the glasses, a long press opens the G2 system menu).</div></div><button class="btn" id="voiceBtn">Start</button></div>
       <div class="row" style="margin-top:12px;gap:8px">
         <button class="btn" id="micBtn">Start microphone</button>
         <button class="btn" id="resetData">Reset all data</button>
@@ -287,7 +287,7 @@ export function mountPhoneUi(d: PhoneDeps): void {
     const ratios = data.baseline.selfRatio
     $('voiceSub').innerHTML = ratios.length
       ? `Tuned: the glasses tag your speech as you ${Math.round([...ratios].sort((a, b) => a - b)[Math.floor(ratios.length / 2)] * 100)}% of the time. Redo it in a new room.`
-      : 'Teaches AuraPet how the glasses hear <i>your</i> voice, so only you count. On the glasses: tap to open the pet card, then long-press.'
+      : 'Teaches AuraPet how the glasses hear <i>your</i> voice, so only you count. Start it here.'
     $('crisis').innerHTML =
       s.phase === 'crisis'
         ? `<div class="banner"><b>You matter.</b><div class="sub" style="margin-top:4px">That sounded really heavy. AuraPet has paused its game. Please reach out to someone you trust, a friend, family member, or someone nearby, and let them know how you're feeling.</div></div>`
