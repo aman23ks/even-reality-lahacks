@@ -26,6 +26,9 @@ export function freshData(): PersistedData {
     storms: [],
     kindness: [],
     forecastDay: '',
+    badges: {},
+    pbMs: 0,
+    selfRecoveries: 0,
   }
 }
 

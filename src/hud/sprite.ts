@@ -9,6 +9,8 @@ import type { StageId, Weather } from '../types'
 
 export type Face = 'happy' | 'neutral' | 'worried' | 'sad' | 'calm'
 export type Effect = 'none' | 'bloom' | 'evolve'
+/** Earned by badges; worn on the lens */
+export type Accessory = 'patch' | 'flower' | 'glasses' | 'scarf'
 
 export interface SpriteSpec {
   w: number
@@ -24,10 +26,11 @@ export interface SpriteSpec {
   frame: number
   /** draw nothing (quiet lens) */
   hidden?: boolean
+  accessories?: Accessory[]
 }
 
 export function spriteKey(s: SpriteSpec): string {
-  return [s.w, s.h, s.stage, s.face, s.weather, s.scale.toFixed(2), s.effect, s.glow, s.frame % 4, s.hidden ? 1 : 0].join('|')
+  return [s.w, s.h, s.stage, s.face, s.weather, s.scale.toFixed(2), s.effect, s.glow, s.frame % 4, s.hidden ? 1 : 0, (s.accessories ?? []).join(',')].join('|')
 }
 
 const PX = 3 // logical pixel size
@@ -65,6 +68,7 @@ export function drawSprite(spec: SpriteSpec): SpriteOutput {
     blob(c, cx, cy, r)
     drawAccessoriesFront(c, spec.stage, cx, cy, r)
     drawFace(c, spec.face, cx, cy, r)
+    for (const a of spec.accessories ?? []) drawAccessory(c, a, cx, cy, r)
   }
   drawWeather(c, spec.weather, W, H, cx, cy, r, spec.frame)
   if (spec.effect === 'bloom') drawBloom(c, cx, cy, r, unit, spec.frame)
@@ -253,6 +257,46 @@ function drawFace(c: CanvasRenderingContext2D, face: Face, cx: number, cy: numbe
       arc(c, cx, cy + r * 0.55, r * 0.22, Math.PI * 1.2, Math.PI * 1.8, black, 1.3)
       ellipse(c, cx + ex + es * 0.3, ey + es * 2.6, es * 0.5, es * 0.8, LINE)
       break
+  }
+}
+
+/** Badge rewards, drawn on top of the body */
+function drawAccessory(c: CanvasRenderingContext2D, a: Accessory, cx: number, cy: number, r: number): void {
+  const ex = r * 0.38
+  const ey = cy - r * 0.08
+  const es = Math.max(1.2, r * 0.13)
+  switch (a) {
+    case 'glasses': // read the room
+      for (const s of [-1, 1]) ellipse(c, cx + s * ex, ey, es * 2, es * 1.8, undefined, LINE, 1.1)
+      line(c, [[cx - ex + es * 2, ey], [cx + ex - es * 2, ey]], LINE, 1)
+      break
+    case 'flower': { // kindness
+      // Two blossoms sitting on the top edge of the head, so they read against the dark background
+      const pr = Math.max(1.2, r * 0.15)
+      for (const [fx, fy] of [[cx - r * 0.42, cy - r * 0.98], [cx + r * 0.05, cy - r * 1.05]] as Array<[number, number]>) {
+        for (let k = 0; k < 5; k++) {
+          const ang = (k / 5) * Math.PI * 2 - Math.PI / 2
+          ellipse(c, fx + Math.cos(ang) * pr * 1.15, fy + Math.sin(ang) * pr * 1.15, pr * 0.85, pr * 0.85, LINE)
+        }
+        ellipse(c, fx, fy, pr * 0.7, pr * 0.7, '#000')
+      }
+      break
+    }
+    case 'patch': { // repair: a little heart plaster
+      const hx = cx + r * 0.58
+      const hy = cy + r * 0.32
+      const hr = Math.max(1, r * 0.12)
+      ellipse(c, hx - hr * 0.8, hy, hr, hr, LINE)
+      ellipse(c, hx + hr * 0.8, hy, hr, hr, LINE)
+      poly(c, [[hx - hr * 1.75, hy + hr * 0.3], [hx + hr * 1.75, hy + hr * 0.3], [hx, hy + hr * 2.1]], LINE)
+      break
+    }
+    case 'scarf': { // calmed down on your own
+      const sy = cy + r * 0.52
+      poly(c, [[cx - r * 0.82, sy - r * 0.1], [cx + r * 0.82, sy - r * 0.1], [cx + r * 0.78, sy + r * 0.14], [cx - r * 0.78, sy + r * 0.14]], LINE)
+      poly(c, [[cx + r * 0.35, sy + r * 0.1], [cx + r * 0.6, sy + r * 0.1], [cx + r * 0.66, sy + r * 0.62], [cx + r * 0.42, sy + r * 0.58]], LINE)
+      break
+    }
   }
 }
 

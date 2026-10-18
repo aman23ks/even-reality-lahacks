@@ -9,6 +9,7 @@ import type { AudioInput } from '../audio/input'
 import type { HudRenderer, MirrorFrame } from '../hud/renderer'
 import { drawMirror } from '../hud/mirrorCanvas'
 import { RESETS, successRate } from '../engine/resets'
+import { ACCESSORY_NAMES, BADGES } from '../engine/badges'
 import { currentStages, nextStage, stageLabel } from '../engine/store'
 import { diag } from '../diagnostics'
 import type { ResetId } from '../types'
@@ -127,6 +128,13 @@ export function mountPhoneUi(d: PhoneDeps): void {
     <div class="card">
       <h2>What calms you</h2>
       <div id="calms"></div>
+    </div>
+
+    <div class="card">
+      <h2>Trophy case</h2>
+      <div class="stats" id="trophyStats"></div>
+      <div class="sub" id="wearing" style="margin-bottom:10px"></div>
+      <div id="badges" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
     </div>
 
     <div class="card">
@@ -286,13 +294,14 @@ export function mountPhoneUi(d: PhoneDeps): void {
         : ''
 
     // Charts only redraw when data changes (or every 30s to advance "now"), so hover isn't interrupted
-    const sig = `${data.timeline.length}|${data.recoveries.length}|${data.kindness.length}|${data.storms.length}|${s.stage}|${Math.floor(Date.now() / 30000)}`
+    const sig = `${data.timeline.length}|${data.recoveries.length}|${data.kindness.length}|${data.storms.length}|${Object.keys(data.badges).length}|${d.aura.accessories().length}|${s.stage}|${Math.floor(Date.now() / 30000)}`
     if (sig !== chartSig) {
       chartSig = sig
       renderTimeline(d)
       renderBounce(d)
       renderCalms(d)
       renderPatterns(d)
+      renderTrophies(d)
     }
     renderStages(d, s)
     $('diag').textContent = diagText(d)
@@ -514,7 +523,7 @@ function renderBounce(d: PhoneDeps): void {
         const x = 5 + i * slot + (slot - bw) / 2
         const y = H - B - h
         const label = i === 0 || i === shown.length - 1 ? `<text x="${x + bw / 2}" y="${y - 4}" fill="var(--text2)" font-size="10" text-anchor="middle">${fmtMin(m)}</text>` : ''
-        return `<path d="M${x},${H - B}V${y + 4}Q${x},${y} ${x + 4},${y}H${x + bw - 4}Q${x + bw},${y} ${x + bw},${y + 4}V${H - B}Z" fill="var(--good)"><title>${fmtTime(r.recoveredAt)} · ${r.resetId === 'repair' ? 'Repair' : RESETS[r.resetId].title} · ${fmtMin(m)}</title></path>${label}`
+        return `<path d="M${x},${H - B}V${y + 4}Q${x},${y} ${x + 4},${y}H${x + bw - 4}Q${x + bw},${y} ${x + bw},${y + 4}V${H - B}Z" fill="var(--good)"><title>${fmtTime(r.recoveredAt)} · ${r.resetId === 'repair' ? 'Repair' : r.resetId === 'self' ? 'On your own' : RESETS[r.resetId].title} · ${fmtMin(m)}</title></path>${label}`
       })
       .join('') +
     `<text x="5" y="${H - 4}" fill="var(--muted)" font-size="9">oldest</text><text x="${W - 5}" y="${H - 4}" fill="var(--muted)" font-size="9" text-anchor="end">latest</text>`
@@ -536,6 +545,27 @@ function judgeChecklist(d: PhoneDeps): string {
     const ok = done.includes(f.key as never)
     return `<div class="reset-row"><div class="row between"><span>${ok ? '✅' : '⬜'} ${f.title}</span></div><div class="sub">${escapeHtml(f.say)}</div></div>`
   }).join('')
+}
+
+function renderTrophies(d: PhoneDeps): void {
+  const data = d.store.data
+  const list = d.aura.trophies()
+  const unlocked = list.filter((t) => t.unlocked).length
+  document.getElementById('trophyStats')!.innerHTML = [
+    stat(`${unlocked}/${list.length}`, 'badges'),
+    stat(data.pbMs ? fmtMin(data.pbMs / 60000) : '–', 'best bounce-back'),
+    stat(String(data.selfRecoveries), 'on your own'),
+  ].join('')
+  const worn = d.aura.accessories()
+  document.getElementById('wearing')!.textContent = worn.length
+    ? `${data.pet.name} is wearing: ${worn.map((a) => ACCESSORY_NAMES[a]).join(', ')}`
+    : `Earn badges and ${data.pet.name} gets things to wear on your lens.`
+  document.getElementById('badges')!.innerHTML = list
+    .map(({ id, unlocked: on }) => {
+      const b = BADGES[id]
+      return `<div class="stat" style="text-align:center;opacity:${on ? 1 : 0.38}" title="${escapeHtml(b.desc)}"><div style="font-size:22px">${on ? b.icon : '🔒'}</div><span style="color:var(--text)">${escapeHtml(b.title)}</span><br><span>${escapeHtml(b.desc)}</span></div>`
+    })
+    .join('')
 }
 
 function renderPatterns(d: PhoneDeps): void {

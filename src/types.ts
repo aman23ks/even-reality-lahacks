@@ -60,7 +60,7 @@ export interface MoodPoint {
 export interface RecoveryRecord {
   spikeAt: number
   recoveredAt: number
-  resetId: ResetId | 'repair'
+  resetId: ResetId | 'repair' | 'self'
   bounceBackMs: number
 }
 
@@ -89,6 +89,12 @@ export interface PersistedData {
   kindness: Array<{ t: number; kind: KindAct }>
   /** last day the timed forecast was shown (YYYY-MM-DD) */
   forecastDay: string
+  /** badge id → unlock time */
+  badges: Record<string, number>
+  /** fastest bounce-back so far (ms), 0 = none yet */
+  pbMs: number
+  /** times you calmed down before any reset */
+  selfRecoveries: number
 }
 
 export type InputType = 'tap' | 'double_tap' | 'swipe_forward' | 'swipe_backward' | 'long_press'

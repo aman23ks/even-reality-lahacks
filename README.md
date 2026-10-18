@@ -30,6 +30,9 @@ listen (your voice only) → notice a sustained spiral → nudge on the lens →
 | **Kindness feeds Mochi** | Thanking, praising or encouraging someone makes Mochi glow: *"+1 kindness (3 today)"*. |
 | **Storm forecast** | Learns what your storms are about (topic tags only) and when they happen. On opening: *"'Deadline' keeps coming up in your storms."* At a risky hour: *"This hour often gets tense. One slow breath first?"* |
 | **Judge mode** | A guided ~3-minute tour for first-time wearers that shows every feature once and ends at Zenith (3 bounce-backs): **1/4** vent about work → reset → calm; **2/4** thank someone (kindness); **3/4** snap jokingly → apologise (repair); **4/4** tense chat with a teammate (read the room, silent mid-conversation, debrief after). Zenith screen summarises storm topics (forecast) and what you did. Swipe skips a step; the phone shows a live checklist. On by default in the judging build. |
+| **Badges & accessories** | Good moments unlock badges, and the first ones give Mochi something to **wear on the lens**: 🩹 heart patch (repair), 🌸 flower crown (kindness), 👓 glasses (read the room), 🧣 scarf (calmed down on your own). More badges: Peacemaker, Storm Chaser, Kind Soul, Zen Master, Night Owl Calm. Trophy case on the phone. Judge runs collect their own set. |
+| **Personal bests** | Every bounce-back is timed: *"New personal best! Back in 0:45 (was 2:10)"*. |
+| **On your own** | A storm that clears with no reset counts most: *"You came back on your own. That's the real goal."* |
 | **Slow-down whisper** | If you're talking much faster and louder than your usual, `slow down...` fades in on the lens. |
 | **Safety pause** | If something you say sounds really heavy, the game pauses and gently suggests reaching out to someone you trust. |
 | **Lens mirror** | `/mirror.html` shows exactly what the wearer sees, live, for the projector. |

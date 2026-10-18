@@ -20,6 +20,7 @@ import { BREATH, LOOK_UP, RESETS, pickReset } from './resets'
 import { Store, median, nextStage, stageFor, stageLabel, useJudgeStages } from './store'
 import type { HeadTracker } from './imu'
 import { diag, diagEvent } from '../diagnostics'
+import { ACCESSORY_NAMES, BADGES, accessoriesFor, fmtDuration, type BadgeId } from './badges'
 
 export type Phase = 'hatching' | 'idle' | 'nudged' | 'active' | 'bloom' | 'cleared' | 'evolving' | 'crisis' | 'voicecheck' | 'intro'
 
@@ -53,6 +54,8 @@ export interface AuraSnapshot {
 
 const MAX_BASELINE = 40
 
+type NoticeKind = 'repair' | 'room' | 'kind' | 'forecast' | 'badge' | 'pb' | 'self'
+
 export type JudgeFeature = 'storm' | 'kind' | 'repair' | 'room' | 'convo' | 'pace' | 'forecast'
 
 const VOICE_LINES = [
@@ -85,7 +88,14 @@ export class Aura {
   private debrief = false
 
   /** One short, quiet lens moment from the social features (repair / read the room / kindness / forecast) */
-  private notice: { kind: 'repair' | 'room' | 'kind' | 'forecast'; title: string; body: string; until: number } | null = null
+  private notice: { kind: NoticeKind; title: string; body: string; until: number } | null = null
+  /** Rewards (badges, personal bests) wait their turn until the lens is free */
+  private noticeQueue: Array<{ kind: NoticeKind; title: string; body: string; ms: number }> = []
+  /** "Calmed down on your own": a storm that clears without any reset */
+  private selfWatch: { since: number; assisted: boolean } | null = null
+  /** Judge runs collect their own badges so a demo never touches the owner's trophies */
+  private judgeBadges = new Set<BadgeId>()
+  private judgePbMs = 0
   /** After a sharp remark: an apology within this window counts as a repair (a bounce-back) */
   private repairWindow: { since: number; until: number } | null = null
   /** After "they sound stressed": a caring reply within this window counts */
@@ -168,6 +178,10 @@ export class Aura {
     this.judgeStartedAt = Date.now()
     this.judgeStep = 0
     this.judgeDone.clear()
+    this.judgeBadges.clear()
+    this.judgePbMs = 0
+    this.noticeQueue = []
+    this.selfWatch = null
     this.notice = null
     this.repairWindow = null
     useJudgeStages(true)
@@ -519,6 +533,7 @@ export class Aura {
       !this.active &&
       now - this.lastRepairOfferAt > t.socialCooldownMs
     ) {
+      this.makeRoomForCue()
       this.lastRepairOfferAt = now
       this.repairWindow = { since: now, until: now + 45_000 }
       this.notice = {
@@ -540,6 +555,7 @@ export class Aura {
       if (answeredCue) {
         this.careWindowUntil = 0
         this.notice = { kind: 'kind', title: '+ you showed up for them', body: '', until: now + 5_000 }
+        this.award('first_room')
         diagEvent('room_answered', soc.kind)
       } else if (now - this.lastKindShownAt > 8_000 && this.phase === 'idle') {
         const today = kindToday(d.kindness)
@@ -548,8 +564,112 @@ export class Aura {
       this.lastKindShownAt = now
       this.judgeMark('kind')
       if (this.judgeStep === 1) this.judgeStep = 2
+      this.award('first_kind')
+      this.checkBadges(now)
       diagEvent('kindness', soc.kind)
     }
+  }
+
+  // ── Rewards: badges, accessories, personal bests ────────────
+
+  /**
+   * Time-sensitive cues (repair, read the room) beat rewards: a reward on screen goes back to the
+   * front of the queue. Returns false if another cue is already showing.
+   */
+  private makeRoomForCue(): boolean {
+    const n = this.notice
+    if (!n) return true
+    if (n.kind === 'repair' || n.kind === 'room') return false
+    if (n.kind === 'badge' || n.kind === 'pb' || n.kind === 'self') {
+      this.noticeQueue.unshift({ kind: n.kind, title: n.title, body: n.body, ms: 4_000 })
+    }
+    this.notice = null
+    return true
+  }
+
+  private hasBadge(id: BadgeId): boolean {
+    return this.store.data.judgeMode ? this.judgeBadges.has(id) : Boolean(this.store.data.badges[id])
+  }
+
+  private award(id: BadgeId): void {
+    if (this.hasBadge(id)) return
+    if (this.store.data.judgeMode) this.judgeBadges.add(id)
+    else {
+      this.store.data.badges[id] = Date.now()
+      this.store.save()
+    }
+    const b = BADGES[id]
+    this.noticeQueue.push({
+      kind: 'badge',
+      title: `Badge: ${b.title}`,
+      body: b.accessory ? `${b.desc}\n${this.store.data.pet.name} earned ${ACCESSORY_NAMES[b.accessory]}.` : b.desc,
+      ms: 5_000,
+    })
+    diagEvent('badge', id)
+  }
+
+  /** Count-based badges (only for real use; judge runs are too short to count) */
+  private checkBadges(now: number): void {
+    const d = this.store.data
+    const h = new Date(now).getHours()
+    if (h >= 22 || h < 5) this.award('night_owl')
+    if (d.judgeMode) return
+    const repairs = d.recoveries.filter((r) => r.resetId === 'repair').length
+    if (repairs >= 3) this.award('peacemaker')
+    if (d.recoveries.filter((r) => r.resetId !== 'repair').length >= 10) this.award('storm_chaser')
+    if (d.kindness.length >= 10) this.award('kind_soul')
+    if (d.selfRecoveries >= 3) this.award('zen_master')
+  }
+
+  private personalBest(ms: number): void {
+    const d = this.store.data
+    const prev = d.judgeMode ? this.judgePbMs : d.pbMs
+    if (prev && ms >= prev) return
+    if (d.judgeMode) this.judgePbMs = ms
+    else {
+      d.pbMs = ms
+      this.store.save()
+    }
+    if (prev) {
+      this.noticeQueue.unshift({
+        kind: 'pb',
+        title: 'New personal best!',
+        body: `Back in ${fmtDuration(ms)}\n(was ${fmtDuration(prev)})`,
+        ms: 4_500,
+      })
+      diagEvent('personal_best', { ms, prev })
+    }
+  }
+
+  /** The real goal: coming back before Mochi has to step in */
+  private selfRecovered(now: number, since: number): void {
+    const d = this.store.data
+    const before = stageFor(d.pet.recoveries, true)
+    d.selfRecoveries++
+    d.pet.recoveries++
+    d.recoveries.push({ spikeAt: since, recoveredAt: now, resetId: 'self', bounceBackMs: now - since })
+    this.store.save()
+    this.noticeQueue.unshift({
+      kind: 'self',
+      title: 'You came back on your own.',
+      body: `That's the real goal.\n${d.pet.name} grew.`,
+      ms: 6_000,
+    })
+    if (stageFor(d.pet.recoveries, true) !== before) this.celebrate = { kind: 'evolving', bounceMs: now - since }
+    this.award('first_self')
+    this.personalBest(now - since)
+    this.checkBadges(now)
+    diagEvent('self_recovery', { ms: now - since })
+  }
+
+  accessories() {
+    const d = this.store.data
+    return accessoriesFor(d.judgeMode ? this.judgeBadges : (Object.keys(d.badges) as BadgeId[]))
+  }
+
+  /** For the phone's trophy case */
+  trophies(): { id: BadgeId; unlocked: boolean }[] {
+    return (Object.keys(BADGES) as BadgeId[]).map((id) => ({ id, unlocked: this.hasBadge(id) }))
   }
 
   private async onOtherUtterance(u: Utterance): Promise<void> {
@@ -569,7 +689,8 @@ export class Aura {
   private onOtherMood(label: MoodLabel, intensity: number): void {
     const now = Date.now()
     if (label === 'clear' || intensity < 0.55) return
-    if (this.phase !== 'idle' || this.notice || now - this.lastRoomCueAt < this.timings().socialCooldownMs) return
+    if (this.phase !== 'idle' || now - this.lastRoomCueAt < this.timings().socialCooldownMs) return
+    if (!this.makeRoomForCue()) return
     this.lastRoomCueAt = now
     this.careWindowUntil = now + 45_000
     this.notice = {
@@ -597,6 +718,9 @@ export class Aura {
     this.store.save()
     this.judgeMark('repair')
     if (this.judgeStep === 2) this.judgeStep = 3
+    this.award('first_repair')
+    this.personalBest(now - since)
+    this.checkBadges(now)
     this.bloomText = 'Nice repair.\n\nThat takes guts.\nMochi grew.'
     this.setPhase('bloom', 5000)
     diagEvent('repair_done', { ms: now - since, evolved })
@@ -737,6 +861,7 @@ export class Aura {
   private evaluate(now = Date.now()): void {
     this.lastEval = now
     const t = this.timings()
+    const d = this.store.data
 
     // Did a reset lead to real recovery?
     if (this.watch) {
@@ -752,6 +877,20 @@ export class Aura {
     // lens (someone may be reading it) and never in judge mode (the guided run waits for the tap)
     if (this.pending && this.phase !== 'nudged' && !this.judgeMode && this.mood.isRecovered(now)) {
       this.pending = null
+    }
+
+    // Calmed down on your own: a storm that clears with no reset in between
+    if (!d.judgeMode) {
+      const w = this.mood.snapshot(now).weather
+      if (!this.selfWatch && (w === 'stormy' || w === 'foggy') && !this.active && !this.watch) {
+        this.selfWatch = { since: now, assisted: false }
+      }
+      if (this.selfWatch && (this.active || this.watch)) this.selfWatch.assisted = true
+      if (this.selfWatch && this.mood.isRecovered(now)) {
+        const sw = this.selfWatch
+        this.selfWatch = null
+        if (!sw.assisted && now - sw.since > 8_000 && this.phase === 'idle') this.selfRecovered(now, sw.since)
+      }
     }
 
     // Conversation ended (everyone quiet): offer the debrief if it got tense
@@ -817,6 +956,9 @@ export class Aura {
     this.celebrate = { kind: evolved ? 'evolving' : 'cleared', bounceMs }
     this.judgeMark('storm')
     if (this.judgeStep === 0 || this.judgeStep === 3) this.judgeStep++
+    this.selfWatch = null
+    this.personalBest(bounceMs)
+    this.checkBadges(now)
     diagEvent('recovered', { bounceMs, evolved })
   }
 
@@ -830,6 +972,7 @@ export class Aura {
     })
     this.store.data.resetStats[id].offered++
     this.store.save()
+    if (this.selfWatch) this.selfWatch.assisted = true
     if (RESETS[id].verify === 'imu') this.head.setBaseline()
     this.active = {
       id,
@@ -928,6 +1071,10 @@ export class Aura {
     }
     if (this.phase === 'active' && this.active) this.tickReset(now)
     if (this.notice && now > this.notice.until) this.notice = null
+    if (!this.notice && this.phase === 'idle' && !this.celebrate && this.noticeQueue.length) {
+      const q = this.noticeQueue.shift()!
+      this.notice = { kind: q.kind, title: q.title, body: q.body, until: now + q.ms }
+    }
     if (this.repairWindow && now > this.repairWindow.until) this.repairWindow = null
     if (now - this.lastEval > 2000) {
       this.evaluate(now)
@@ -967,7 +1114,9 @@ export class Aura {
     const snap = this.mood.snapshot(now)
     const stage = stageFor(pet.recoveries, pet.hatched)
     const glow = pet.sunlight >= 3
+    const accessories = this.accessories()
     const base = (o: Partial<Omit<SpriteSpec, 'w' | 'h'>> = {}): Omit<SpriteSpec, 'w' | 'h'> => ({
+      accessories,
       stage,
       face: faceFor(snap.weather),
       weather: snap.weather,
@@ -1065,8 +1214,12 @@ export class Aura {
           if (n.kind === 'kind') {
             return ambientFrame(base({ face: 'happy', effect: 'bloom', frame: Math.floor(this.frame / 2) }), n.title, true)
           }
-          const face = n.kind === 'repair' ? 'worried' : n.kind === 'room' ? 'calm' : 'neutral'
-          const hint = n.kind === 'repair' ? 'just say it to them' : n.kind === 'room' ? 'only you can see this' : ''
+          const face = n.kind === 'repair' ? 'worried' : n.kind === 'room' ? 'calm' : n.kind === 'forecast' ? 'neutral' : 'happy'
+          const hint =
+            n.kind === 'repair' ? 'just say it to them' : n.kind === 'room' ? 'only you can see this' : n.kind === 'badge' ? 'new badge' : ''
+          if (n.kind === 'badge' || n.kind === 'self' || n.kind === 'pb') {
+            return cardFrame(base({ face, effect: 'bloom', frame: Math.floor(this.frame / 2), glow: true }), `${n.title}\n\n${n.body}`, hint)
+          }
           return cardFrame(base({ face }), `${n.title}\n\n${n.body}`, hint)
         }
         if (d.judgeMode) return this.judgeView(base, stage, snap.weather)
@@ -1115,14 +1268,15 @@ export class Aura {
     this.judgeMark('forecast')
     const about = topics.slice(0, 2).map((t) => t.slice(0, 10)).join(', ')
     const extras = [
-      this.judgeDone.has('repair') ? 'repaired' : '',
-      this.judgeDone.has('kind') ? 'were kind' : '',
-      this.judgeDone.has('room') ? 'read the room' : '',
+      this.judgeDone.has('repair') ? 'repair' : '',
+      this.judgeDone.has('kind') ? 'kindness' : '',
+      this.judgeDone.has('room') ? 'room' : '',
     ].filter(Boolean)
+    const worn = this.accessories()
     const lines = ["ZENITH! That's AuraPet."]
     if (about) lines.push(`Storms: ${about}`)
-    if (extras.length) lines.push(`You also: ${extras.slice(0, 2).join(', ')}${extras.length > 2 ? ',' : '.'}`)
-    if (extras.length > 2) lines.push(`${extras[2]}.`)
+    if (extras.length) lines.push(`Did: ${extras.join(', ')}`)
+    if (worn.length) lines.push(`Earned: ${worn.join(', ')}`)
     return lines.join('\n')
   }
 
