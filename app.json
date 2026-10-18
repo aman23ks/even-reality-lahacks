@@ -19,7 +19,7 @@
       "name": "network",
       "desc": "Sends short voice clips to the AuraPet server for transcription and mood labels; nothing is stored.",
       "whitelist": [
-        "*"
+        "https://aurapet.onrender.com"
       ]
     }
   ],
