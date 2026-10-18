@@ -46,6 +46,8 @@ export interface UtteranceRequest {
   prosody: Prosody
   verify?: ResetId
   petName: string
+  /** 'other' = the person you're talking to: only their mood comes back */
+  speaker?: 'self' | 'other'
 }
 
 async function post<T>(path: string, body: unknown, timeoutMs = 15000): Promise<T | null> {

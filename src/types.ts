@@ -20,11 +20,21 @@ export interface Verification {
   reason: string
 }
 
+export type KindAct = 'thanks' | 'compliment' | 'encourage' | 'care' | 'none'
+
+export interface Social {
+  harsh: boolean
+  repair: boolean
+  kind: KindAct
+  topic: string
+}
+
 export interface UtteranceResult {
   transcript: string
   words: number
   classification: Classification
   verification?: Verification
+  social?: Social
   source: 'llm' | 'heuristic'
 }
 
@@ -50,7 +60,7 @@ export interface MoodPoint {
 export interface RecoveryRecord {
   spikeAt: number
   recoveredAt: number
-  resetId: ResetId
+  resetId: ResetId | 'repair'
   bounceBackMs: number
 }
 
@@ -73,6 +83,12 @@ export interface PersistedData {
   recoveries: RecoveryRecord[]
   resetStats: Record<ResetId, ResetStat>
   baseline: { wps: number[]; rms: number[]; pitch: number[]; selfRatio: number[] }
+  /** what storms were about (topic tags only, never words), for the forecast */
+  storms: Array<{ t: number; topic: string }>
+  /** kind things you said to people */
+  kindness: Array<{ t: number; kind: KindAct }>
+  /** last day the timed forecast was shown (YYYY-MM-DD) */
+  forecastDay: string
 }
 
 export type InputType = 'tap' | 'double_tap' | 'swipe_forward' | 'swipe_backward' | 'long_press'

@@ -137,11 +137,12 @@ const HALLUCINATIONS = new Set(['you', 'thank you', 'thanks for watching', 'than
 app.post('/api/utterance', guard, async (req, res) => {
   const started = Date.now()
   try {
-    const { audioBase64, text, prosody, verify } = req.body as {
+    const { audioBase64, text, prosody, verify, speaker } = req.body as {
       audioBase64?: string
       text?: string
       prosody?: { loudnessRatio?: number; pitchRatio?: number }
       verify?: ResetId
+      speaker?: 'self' | 'other'
     }
     const p = provider()
 
@@ -187,6 +188,11 @@ app.post('/api/utterance', guard, async (req, res) => {
       `[utterance] ${Date.now() - started}ms ${result.source} label=${result.classification.label}` +
         ` i=${result.classification.intensity.toFixed(2)}${verify ? ` verify(${verify})=${result.verification?.passed}` : ''}`,
     )
+    // The other person's words never leave the server: only their mood label goes back
+    if (speaker === 'other') {
+      res.json({ transcript: '', words, classification: result.classification, source: result.source })
+      return
+    }
     res.json({ transcript, words, ...result })
   } catch (err) {
     console.error('[utterance] error', err)
@@ -220,9 +226,23 @@ async function transcribe(p: Provider, audioBase64: string): Promise<string> {
   return (data.text ?? '').trim()
 }
 
+type Kind = 'thanks' | 'compliment' | 'encourage' | 'care' | 'none'
+
+interface Social {
+  /** the wearer said something sharp, dismissive or hurtful TO another person */
+  harsh: boolean
+  /** an apology / repair attempt ("sorry, that came out wrong") */
+  repair: boolean
+  /** a kind act toward someone */
+  kind: Kind
+  /** what the feeling is about, 1-2 generic words ("deadlines", "manager"); "" if none */
+  topic: string
+}
+
 interface Analysis {
   classification: { label: Label; intensity: number; emotion: string; crisis: boolean }
   verification?: { passed: boolean; reason: string }
+  social: Social
   source: 'llm' | 'heuristic'
 }
 
@@ -234,12 +254,16 @@ function buildPrompt(prosody: { loudnessRatio?: number; pitchRatio?: number }, c
   if (prosody.pitchRatio && prosody.pitchRatio > 0 && prosody.pitchRatio < 0.9) hints.push('lower pitch than usual')
 
   return `You read one short utterance spoken by the wearer of smart glasses, for a wellbeing companion that helps them recover from stress. Reply with JSON only:
-{"label":"storm|fog|clear","intensity":0.0-1.0,"emotion":"1-2 words","crisis":false,"verify_passed":true|false,"verify_reason":"under 40 chars"}
+{"label":"storm|fog|clear","intensity":0.0-1.0,"emotion":"1-2 words","crisis":false,"verify_passed":true|false,"verify_reason":"under 40 chars","harsh":false,"repair":false,"kind":"thanks|compliment|encourage|care|none","topic":"1-2 words"}
 - storm: anxious, stressed, frustrated, angry, overwhelmed, panicked (high-energy negative)
 - fog: sad, tired, discouraged, lonely, hopeless, flat (low-energy negative)
 - clear: calm, neutral, content, happy, curious, focused. Ordinary task talk is clear with low intensity.
 - intensity: how strongly the feeling comes through (0.2 mild, 0.5 clear, 0.8+ strong).
 - crisis: true ONLY for self-harm, suicidal thoughts, or wanting to die / not exist.
+- harsh: true only if the speaker says something sharp, dismissive, blaming or hurtful TO another person ("whatever, do it yourself", "that's a stupid idea"). Complaining about things ("this laptop is useless") is NOT harsh.
+- repair: true if the speaker apologises or walks something back ("sorry, that came out wrong", "I didn't mean that", "my bad").
+- kind: thanks (thanking someone), compliment (praising someone), encourage (cheering someone on), care (asking how someone is / offering help), otherwise none.
+- topic: what the feeling is about in 1-2 generic lowercase words ("deadlines", "manager", "laptop", "money"); "" for small talk.
 - Voice cues (${hints.join(', ') || 'none'}) are tiebreakers only; the words matter most.
 - ${
     criterion
@@ -257,8 +281,12 @@ const CLASSIFY_SCHEMA = {
     crisis: { type: 'boolean' },
     verify_passed: { type: 'boolean' },
     verify_reason: { type: 'string' },
+    harsh: { type: 'boolean' },
+    repair: { type: 'boolean' },
+    kind: { type: 'string', enum: ['thanks', 'compliment', 'encourage', 'care', 'none'] },
+    topic: { type: 'string' },
   },
-  required: ['label', 'intensity', 'emotion', 'crisis', 'verify_passed', 'verify_reason'],
+  required: ['label', 'intensity', 'emotion', 'crisis', 'verify_passed', 'verify_reason', 'harsh', 'repair', 'kind', 'topic'],
   additionalProperties: false,
 }
 
@@ -316,6 +344,12 @@ function toAnalysis(j: any, criterion?: string): Analysis {
     verification: criterion
       ? { passed: j.verify_passed === true, reason: String(j.verify_reason ?? '').slice(0, 60) }
       : undefined,
+    social: {
+      harsh: j.harsh === true,
+      repair: j.repair === true,
+      kind: ['thanks', 'compliment', 'encourage', 'care'].includes(j.kind) ? j.kind : 'none',
+      topic: String(j.topic ?? '').toLowerCase().replace(/[^a-z ]/g, '').trim().slice(0, 20),
+    },
     source: 'llm',
   }
 }
@@ -361,7 +395,32 @@ function classifyHeuristic(
     verification = { passed, reason: passed ? '' : 'one small good thing counts' }
   }
 
-  return { classification: { label, intensity, emotion: '', crisis: false }, verification, source: 'heuristic' }
+  return {
+    classification: { label, intensity, emotion: '', crisis: false },
+    verification,
+    social: heuristicSocial(t),
+    source: 'heuristic',
+  }
+}
+
+function heuristicSocial(t: string): Social {
+  const kind: Kind = /\b(thank|thanks|appreciate)\b/.test(t)
+    ? 'thanks'
+    : /\b(great job|well done|you're amazing|nice work|love your)\b/.test(t)
+      ? 'compliment'
+      : /\b(you got this|you can do it|keep going)\b/.test(t)
+        ? 'encourage'
+        : /\b(are you ok|how are you|can i help|need help)\b/.test(t)
+          ? 'care'
+          : 'none'
+  const topics = ['deadline', 'manager', 'boss', 'laptop', 'meeting', 'money', 'client', 'exam', 'demo', 'code']
+  const topic = topics.find((w) => t.includes(w)) ?? ''
+  return {
+    harsh: /\b(whatever|do it yourself|shut up|stupid idea|your fault|not my problem)\b/.test(t),
+    repair: /\b(sorry|my bad|didn't mean|came out wrong|apologi[sz]e)\b/.test(t),
+    kind,
+    topic: topic ? (topic === 'deadline' ? 'deadlines' : topic) : '',
+  }
 }
 
 function clamp01(n: number): number {

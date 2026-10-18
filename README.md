@@ -25,6 +25,10 @@ listen (your voice only) → notice a sustained spiral → nudge on the lens →
 | **Evolution** | Egg → Sprout → Wisp (3) → Guardian (8) → Zenith (15 recoveries) |
 | **Learns what calms you** | Offers the resets that have worked for you most often first. |
 | **Post-conversation debrief** | When the glasses hear you *and* someone else, AuraPet holds every nudge (nobody talks to their glasses mid-argument). When everyone goes quiet and it got tense, it offers: *"That got tense. Tap when you're free for 30 seconds."* Calm conversations get nothing. |
+| **Repair ("oops")** | Say something sharp *to someone* ("whatever, do it yourself") and the lens offers: *"That came out sharp. Repair it?"* Apologise within 45s and it counts as a bounce-back. Complaining about things never triggers it. |
+| **Read the room** | When the person you're talking to sounds stressed, a private cue: *"They sound stressed. Maybe ask how they're doing."* Checking on them is noticed. Their words are never shown or stored, only their mood. |
+| **Kindness feeds Mochi** | Thanking, praising or encouraging someone makes Mochi glow: *"+1 kindness (3 today)"*. |
+| **Storm forecast** | Learns what your storms are about (topic tags only) and when they happen. On opening: *"'Deadline' keeps coming up in your storms."* At a risky hour: *"This hour often gets tense. One slow breath first?"* |
 | **Judge mode** | A guided 2-minute run for first-time wearers: the lens says what to say, one stressed sentence nudges, and Mochi reaches Zenith in 3 bounce-backs. On by default in the judging build. |
 | **Slow-down whisper** | If you're talking much faster and louder than your usual, `slow down...` fades in on the lens. |
 | **Safety pause** | If something you say sounds really heavy, the game pauses and gently suggests reaching out to someone you trust. |

@@ -51,12 +51,17 @@ export class Segmenter {
   private uttFns: Array<(u: Utterance) => void> = []
   private startFns: Array<() => void> = []
   private otherFns: Array<() => void> = []
+  private otherUttFns: Array<(u: Utterance) => void> = []
 
   onUtterance(fn: (u: Utterance) => void): void {
     this.uttFns.push(fn)
   }
   onSpeechStart(fn: () => void): void {
     this.startFns.push(fn)
+  }
+  /** The other speaker's audio (only used to sense their mood; their words are never shown or stored) */
+  onOtherUtterance(fn: (u: Utterance) => void): void {
+    this.otherUttFns.push(fn)
   }
   /** An utterance was judged to be someone other than the wearer */
   onOtherSpeaker(fn: () => void): void {
@@ -157,12 +162,6 @@ export class Segmenter {
     const isWearer = selfRatio === null || selfRatio >= this.selfThreshold
     diag.recentSelfRatios.push(selfRatio === null ? -1 : Math.round(selfRatio * 100) / 100)
     if (diag.recentSelfRatios.length > 20) diag.recentSelfRatios.shift()
-    if (!isWearer) {
-      diag.ignoredOtherSpeech++
-      this.otherFns.forEach((fn) => fn())
-      return
-    }
-
     // Trim trailing silence
     const keep = Math.max(1, chunks.length - Math.floor(END_SILENCE_MS / 20) + 5)
     const pcm = floatToInt16(concat(chunks.slice(0, keep)))
@@ -174,6 +173,12 @@ export class Segmenter {
       pitchHz: medianPitch(voiced),
       endedAt: Date.now(),
       selfRatio,
+    }
+    if (!isWearer) {
+      diag.ignoredOtherSpeech++
+      this.otherFns.forEach((fn) => fn())
+      this.otherUttFns.forEach((fn) => fn(utt))
+      return
     }
     diag.utterances++
     this.uttFns.forEach((fn) => fn(utt))

@@ -23,6 +23,9 @@ export function freshData(): PersistedData {
     recoveries: [],
     resetStats: emptyStats(),
     baseline: { wps: [], rms: [], pitch: [], selfRatio: [] },
+    storms: [],
+    kindness: [],
+    forecastDay: '',
   }
 }
 

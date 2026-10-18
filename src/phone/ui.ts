@@ -130,6 +130,14 @@ export function mountPhoneUi(d: PhoneDeps): void {
     </div>
 
     <div class="card">
+      <h2>Your patterns</h2>
+      <div class="stats" id="patternStats"></div>
+      <div class="sub" id="forecastLine" style="margin-bottom:10px"></div>
+      <div id="topics"></div>
+      <div class="sub" style="margin-top:8px">Only topic tags are kept (like "deadline"), never what anyone said.</div>
+    </div>
+
+    <div class="card">
       <h2>Evolution</h2>
       <div class="stages" id="stages"></div>
       <div class="caption" id="nextStage"></div>
@@ -271,12 +279,13 @@ export function mountPhoneUi(d: PhoneDeps): void {
         : ''
 
     // Charts only redraw when data changes (or every 30s to advance "now"), so hover isn't interrupted
-    const sig = `${data.timeline.length}|${data.recoveries.length}|${s.stage}|${Math.floor(Date.now() / 30000)}`
+    const sig = `${data.timeline.length}|${data.recoveries.length}|${data.kindness.length}|${data.storms.length}|${s.stage}|${Math.floor(Date.now() / 30000)}`
     if (sig !== chartSig) {
       chartSig = sig
       renderTimeline(d)
       renderBounce(d)
       renderCalms(d)
+      renderPatterns(d)
     }
     renderStages(d, s)
     $('diag').textContent = diagText(d)
@@ -498,10 +507,36 @@ function renderBounce(d: PhoneDeps): void {
         const x = 5 + i * slot + (slot - bw) / 2
         const y = H - B - h
         const label = i === 0 || i === shown.length - 1 ? `<text x="${x + bw / 2}" y="${y - 4}" fill="var(--text2)" font-size="10" text-anchor="middle">${fmtMin(m)}</text>` : ''
-        return `<path d="M${x},${H - B}V${y + 4}Q${x},${y} ${x + 4},${y}H${x + bw - 4}Q${x + bw},${y} ${x + bw},${y + 4}V${H - B}Z" fill="var(--good)"><title>${fmtTime(r.recoveredAt)} · ${RESETS[r.resetId].title} · ${fmtMin(m)}</title></path>${label}`
+        return `<path d="M${x},${H - B}V${y + 4}Q${x},${y} ${x + 4},${y}H${x + bw - 4}Q${x + bw},${y} ${x + bw},${y + 4}V${H - B}Z" fill="var(--good)"><title>${fmtTime(r.recoveredAt)} · ${r.resetId === 'repair' ? 'Repair' : RESETS[r.resetId].title} · ${fmtMin(m)}</title></path>${label}`
       })
       .join('') +
     `<text x="5" y="${H - 4}" fill="var(--muted)" font-size="9">oldest</text><text x="${W - 5}" y="${H - 4}" fill="var(--muted)" font-size="9" text-anchor="end">latest</text>`
+}
+
+function renderPatterns(d: PhoneDeps): void {
+  const data = d.store.data
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  const kindToday = data.kindness.filter((k) => k.t >= start.getTime()).length
+  const repairs = data.recoveries.filter((r) => r.resetId === 'repair').length
+  document.getElementById('patternStats')!.innerHTML = [
+    stat(String(kindToday), 'kind words today'),
+    stat(String(repairs), 'repairs'),
+    stat(String(data.storms.length), 'storms logged'),
+  ].join('')
+  const f = d.aura.forecast()
+  document.getElementById('forecastLine')!.textContent = f.line
+    ? `🔮 Forecast: ${f.line}`
+    : '🔮 Forecast: a few more days of use and AuraPet will spot your patterns.'
+  const max = Math.max(1, ...f.topics.map(([, n]) => n))
+  document.getElementById('topics')!.innerHTML = f.topics.length
+    ? f.topics
+        .map(
+          ([t, n]) =>
+            `<div class="reset-row"><div class="row between"><span>${escapeHtml(t)}</span><span class="sub">${n} storm${n === 1 ? '' : 's'}</span></div><div class="meter"><i style="width:${Math.round((n / max) * 100)}%;background:var(--storm)"></i></div></div>`,
+        )
+        .join('')
+    : '<div class="sub">What your storms are about will show up here.</div>'
 }
 
 function renderCalms(d: PhoneDeps): void {

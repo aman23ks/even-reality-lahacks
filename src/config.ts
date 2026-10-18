@@ -21,6 +21,8 @@ export interface Timings {
   convoGapMs: number
   /** tense sentences from the wearer during a conversation that earn a debrief */
   debriefMinTense: number
+  /** min gap between social cues (repair offer, read-the-room) */
+  socialCooldownMs: number
 }
 
 export const NORMAL_TIMINGS: Timings = {
@@ -34,6 +36,7 @@ export const NORMAL_TIMINGS: Timings = {
   triggerMinUtterances: 2,
   convoGapMs: 20_000,
   debriefMinTense: 2,
+  socialCooldownMs: 120_000,
 }
 
 export const DEMO_TIMINGS: Timings = {
@@ -47,6 +50,7 @@ export const DEMO_TIMINGS: Timings = {
   triggerMinUtterances: 2,
   convoGapMs: 10_000,
   debriefMinTense: 1,
+  socialCooldownMs: 30_000,
 }
 
 /** Judge mode: a stranger wearing G2 for ~2 minutes should reach Zenith in three quick rounds */
@@ -63,6 +67,7 @@ export const JUDGE_TIMINGS: Timings = {
   negativeIntensity: 0.3,
   convoGapMs: 6_000,
   debriefMinTense: 1,
+  socialCooldownMs: 8_000,
 }
 
 export const MOOD = {

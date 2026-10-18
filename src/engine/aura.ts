@@ -14,7 +14,7 @@ import type { HudRenderer } from '../hud/renderer'
 import { ambientFrame, bar, cardFrame, textFrame, wideFrame, type HudFrame } from '../hud/frames'
 import type { Face, SpriteSpec } from '../hud/sprite'
 import { api } from '../api'
-import type { InputType, MoodLabel, ResetId, StageId, UtteranceResult, Weather } from '../types'
+import type { InputType, MoodLabel, ResetId, Social, StageId, UtteranceResult, Weather } from '../types'
 import { MoodEngine, type MoodSnapshot } from './mood'
 import { BREATH, LOOK_UP, RESETS, pickReset } from './resets'
 import { Store, median, nextStage, stageFor, stageLabel, useJudgeStages } from './store'
@@ -82,6 +82,20 @@ export class Aura {
   private lastOtherAt = 0
   private debrief = false
 
+  /** One short, quiet lens moment from the social features (repair / read the room / kindness / forecast) */
+  private notice: { kind: 'repair' | 'room' | 'kind' | 'forecast'; title: string; body: string; until: number } | null = null
+  /** After a sharp remark: an apology within this window counts as a repair (a bounce-back) */
+  private repairWindow: { since: number; until: number } | null = null
+  /** After "they sound stressed": a caring reply within this window counts */
+  private careWindowUntil = 0
+  private lastRepairOfferAt = 0
+  private lastRoomCueAt = 0
+  private lastKindShownAt = 0
+  private bloomText = ''
+  private judgeStartedAt = 0
+  private sessionStartedAt = Date.now()
+  private forecastShown = false
+
   private mood: MoodEngine
   private pending: { kind: 'storm' | 'fog'; since: number } | null = null
   private active: ActiveReset | null = null
@@ -114,6 +128,7 @@ export class Aura {
     glasses.onInput((t) => this.onInput(t))
     segmenter.onUtterance((u) => void this.onUtterance(u))
     segmenter.onSpeechStart(() => this.onSpeechStart())
+    segmenter.onOtherUtterance((u) => void this.onOtherUtterance(u))
     segmenter.onOtherSpeaker(() => {
       this.hud.caption = 'Someone else is talking - not counted'
       this.noteSpeech('other')
@@ -142,6 +157,9 @@ export class Aura {
     d.onboarded = true
     d.pet.recoveries = 0
     d.recoveries = []
+    this.judgeStartedAt = Date.now()
+    this.notice = null
+    this.repairWindow = null
     useJudgeStages(true)
     this.mood = new MoodEngine(() => this.timings())
     this.pending = null
@@ -238,6 +256,15 @@ export class Aura {
       this.hud.caption = `Someone else: "${trimmed.slice(5).trim().slice(0, 60)}" - not counted`
       this.noteSpeech('other')
       this.changed()
+      const theirs = await api.analyze({
+        text: trimmed.slice(5).trim(),
+        durationMs: 2000,
+        voicedMs: 2000,
+        prosody: { loudnessRatio: 1, pitchRatio: 0 },
+        petName: this.store.data.pet.name,
+        speaker: 'other',
+      })
+      if (theirs) this.onOtherMood(theirs.classification.label, theirs.classification.intensity)
       return
     }
     if (!fromSpeechApi) this.noteSpeech('self')
@@ -307,6 +334,8 @@ export class Aura {
       if (c.label === 'storm') this.convo.storm++
       else this.convo.fog++
     }
+
+    if (r.social) this.handleSocial(r.social, c.label, now)
 
     // Sunlight: joyful/calm moments make the pet glow (looks only, never evolution)
     const pet = this.store.data.pet
@@ -446,6 +475,166 @@ export class Aura {
   /** Phone-side shortcut so judges/devs can open the current nudge without the touchpad */
   phoneTap(): void {
     this.onInput('tap')
+  }
+
+  // ── Social features: repair · read the room · kindness · forecast ──
+
+  private handleSocial(soc: Social, label: MoodLabel, now: number): void {
+    const d = this.store.data
+    const t = this.timings()
+
+    // Forecast data: what storms are about (topic tags only)
+    if (label !== 'clear' && soc.topic) {
+      d.storms.push({ t: now, topic: normTopic(soc.topic) })
+      if (d.storms.length > 300) d.storms.shift()
+    }
+
+    // Repair: an apology inside the window after a sharp remark is a bounce-back
+    if (soc.repair && this.repairWindow && now < this.repairWindow.until) {
+      this.completeRepair(now)
+      return
+    }
+
+    // The "oops" moment: something sharp said TO someone (only when someone else is around)
+    const someoneAround = Boolean(this.convo) || now - this.lastOtherAt < 90_000
+    if (
+      soc.harsh &&
+      someoneAround &&
+      this.phase === 'idle' &&
+      !this.active &&
+      now - this.lastRepairOfferAt > t.socialCooldownMs
+    ) {
+      this.lastRepairOfferAt = now
+      this.repairWindow = { since: now, until: now + 45_000 }
+      this.notice = {
+        kind: 'repair',
+        title: 'That came out sharp.',
+        body: 'Repair it? Try:\n"Sorry, that came out wrong."',
+        until: now + 12_000,
+      }
+      diagEvent('repair_offer')
+      return
+    }
+
+    // Kindness feeds Mochi (and answers a "they sound stressed" cue)
+    if (soc.kind !== 'none') {
+      d.kindness.push({ t: now, kind: soc.kind })
+      if (d.kindness.length > 300) d.kindness.shift()
+      d.pet.sunlight = Math.min(20, d.pet.sunlight + 1.5)
+      const answeredCue = now < this.careWindowUntil && (soc.kind === 'care' || soc.kind === 'encourage')
+      if (answeredCue) {
+        this.careWindowUntil = 0
+        this.notice = { kind: 'kind', title: '+ you showed up for them', body: '', until: now + 5_000 }
+        diagEvent('room_answered', soc.kind)
+      } else if (now - this.lastKindShownAt > 8_000 && this.phase === 'idle') {
+        const today = kindToday(d.kindness)
+        this.notice = { kind: 'kind', title: `+1 kindness (${today} today)`, body: '', until: now + 4_000 }
+      }
+      this.lastKindShownAt = now
+      diagEvent('kindness', soc.kind)
+    }
+  }
+
+  private async onOtherUtterance(u: Utterance): Promise<void> {
+    if (!this.backendStt) return
+    const theirs = await api.analyze({
+      audioBase64: wavBase64(u.pcm),
+      durationMs: u.durationMs,
+      voicedMs: u.voicedMs,
+      prosody: { loudnessRatio: 1, pitchRatio: 0 },
+      petName: this.store.data.pet.name,
+      speaker: 'other',
+    })
+    if (theirs) this.onOtherMood(theirs.classification.label, theirs.classification.intensity)
+  }
+
+  /** Read the room: the person you're talking to sounds stressed → a private nudge to check in */
+  private onOtherMood(label: MoodLabel, intensity: number): void {
+    const now = Date.now()
+    if (label === 'clear' || intensity < 0.55) return
+    if (this.phase !== 'idle' || this.notice || now - this.lastRoomCueAt < this.timings().socialCooldownMs) return
+    this.lastRoomCueAt = now
+    this.careWindowUntil = now + 45_000
+    this.notice = {
+      kind: 'room',
+      title: label === 'fog' ? 'They sound low.' : 'They sound stressed.',
+      body: "Maybe ask how\nthey're doing.",
+      until: now + 9_000,
+    }
+    diagEvent('room_cue', label)
+    this.changed()
+  }
+
+  private completeRepair(now: number): void {
+    const d = this.store.data
+    const since = this.repairWindow?.since ?? now
+    this.repairWindow = null
+    this.notice = null
+    const before = stageFor(d.pet.recoveries, true)
+    d.pet.recoveries++
+    d.recoveries.push({ spikeAt: since, recoveredAt: now, resetId: 'repair', bounceBackMs: now - since })
+    if (d.judgeMode) this.mood = new MoodEngine(() => this.timings())
+    const evolved = stageFor(d.pet.recoveries, true) !== before
+    if (evolved) this.celebrate = { kind: 'evolving', bounceMs: now - since }
+    this.store.save()
+    this.bloomText = 'Nice repair.\n\nThat takes guts.\nMochi grew.'
+    this.setPhase('bloom', 5000)
+    diagEvent('repair_done', { ms: now - since, evolved })
+  }
+
+  /** Storm forecast: patterns from topic tags and times (needs a few days of data to say anything) */
+  forecast(): { topics: Array<[string, number]>; hour: number | null; line: string } {
+    const d = this.store.data
+    const weekAgo = Date.now() - 7 * 86_400_000
+    const recent = d.storms.filter((x) => x.t >= weekAgo)
+    const counts = new Map<string, number>()
+    for (const x of recent) counts.set(x.topic, (counts.get(x.topic) ?? 0) + 1)
+    const topics = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+    // An hour counts as risky when storms happened in it on 2+ different days
+    const days = new Map<number, Set<string>>()
+    for (const x of recent) {
+      const dt = new Date(x.t)
+      const set = days.get(dt.getHours()) ?? new Set<string>()
+      set.add(dt.toDateString())
+      days.set(dt.getHours(), set)
+    }
+    const risky = [...days.entries()].filter(([, s]) => s.size >= 2).sort((a, b) => b[1].size - a[1].size)[0]
+    const hour = risky ? risky[0] : null
+    const top = topics[0] && topics[0][1] >= 2 ? topics[0][0] : null
+    const line = top
+      ? `"${cap(top)}" keeps coming up in your storms.`
+      : hour !== null
+        ? `Around ${fmtHour(hour)} tends to get tense.`
+        : ''
+    return { topics, hour, line }
+  }
+
+  private maybeForecast(now: number): void {
+    const d = this.store.data
+    if (d.judgeMode || this.phase !== 'idle' || this.notice || this.pending) return
+    const f = this.forecast()
+    if (!f.line) return
+    // Once per session, a few seconds after opening
+    if (!this.forecastShown && now - this.sessionStartedAt > 8_000) {
+      this.forecastShown = true
+      this.notice = { kind: 'forecast', title: 'Storm forecast', body: `${f.line}\nI'll keep watch.`, until: now + 8_000 }
+      diagEvent('forecast', f.line)
+      return
+    }
+    // Heads-up at the start of a risky hour, once a day
+    const dt = new Date(now)
+    const day = dt.toISOString().slice(0, 10)
+    if (f.hour !== null && dt.getHours() === f.hour && dt.getMinutes() < 10 && d.forecastDay !== day) {
+      d.forecastDay = day
+      this.store.save()
+      this.notice = {
+        kind: 'forecast',
+        title: `It's ${fmtHour(f.hour)}.`,
+        body: 'This hour often gets tense.\nOne slow breath first?',
+        until: now + 10_000,
+      }
+      diagEvent('forecast_hour', f.hour)
+    }
   }
 
   // ── Conversation tracking ───────────────────────────────────
@@ -687,6 +876,7 @@ export class Aura {
   }
 
   private toIdle(): void {
+    this.bloomText = ''
     if (this.phase === 'cleared' || this.phase === 'evolving') this.celebrate = null
     this.setPhase('idle')
   }
@@ -713,7 +903,12 @@ export class Aura {
       this.setPhase('idle') // still pending: tap from ambient starts it
     }
     if (this.phase === 'active' && this.active) this.tickReset(now)
-    if (now - this.lastEval > 2000) this.evaluate(now)
+    if (this.notice && now > this.notice.until) this.notice = null
+    if (this.repairWindow && now > this.repairWindow.until) this.repairWindow = null
+    if (now - this.lastEval > 2000) {
+      this.evaluate(now)
+      this.maybeForecast(now)
+    }
 
     void this.hud.render(this.view(now))
     if (this.frame % 4 === 0) this.changed()
@@ -800,7 +995,7 @@ export class Aura {
       case 'bloom':
         return cardFrame(
           base({ face: 'happy', weather: 'none', effect: 'bloom', frame: Math.floor(this.frame / 2) }),
-          "You came back.\n\nStorm -> bloom.\nI'll keep watch with you.",
+          this.bloomText || "You came back.\n\nStorm -> bloom.\nI'll keep watch with you.",
           '',
         )
       case 'cleared': {
@@ -841,6 +1036,15 @@ export class Aura {
         )
       case 'idle':
       default: {
+        const n = this.notice
+        if (n && now < n.until) {
+          if (n.kind === 'kind') {
+            return ambientFrame(base({ face: 'happy', effect: 'bloom', frame: Math.floor(this.frame / 2) }), n.title, true)
+          }
+          const face = n.kind === 'repair' ? 'worried' : n.kind === 'room' ? 'calm' : 'neutral'
+          const hint = n.kind === 'repair' ? 'just say it to them' : n.kind === 'room' ? 'only you can see this' : ''
+          return cardFrame(base({ face }), `${n.title}\n\n${n.body}`, hint)
+        }
         if (d.judgeMode) return this.judgeView(base, stage, snap.weather)
         if (now < this.cardUntil) {
           const body = `${pet.name}  -  ${stageLabel(stage)}\nSky: ${snap.weather}\n\nRecoveries: ${pet.recoveries}\n${toNext}`
@@ -864,6 +1068,12 @@ export class Aura {
     }
   }
 
+  private judgeSummary(): string {
+    const topics = [...new Set(this.store.data.storms.filter((x) => x.t >= this.judgeStartedAt).map((x) => x.topic))].slice(0, 3)
+    const about = topics.length ? `Your storms: ${topics.join(', ')}.\n` : ''
+    return `That's AuraPet.\n${about}It helps you bounce back\nfrom stressful moments.`
+  }
+
   /** Judge mode idle screen: always tells the wearer exactly what to say next */
   private judgeView(
     base: (o?: Partial<Omit<SpriteSpec, 'w' | 'h'>>) => Omit<SpriteSpec, 'w' | 'h'>,
@@ -875,7 +1085,7 @@ export class Aura {
     if (stage === 'zenith') {
       return cardFrame(
         base({ face: 'happy', weather: 'none', glow: true }),
-        "That's AuraPet.\n\nIt helps you bounce back\nfrom stressful moments.",
+        this.judgeSummary(),
         '2x tap: try again',
       )
     }
@@ -902,6 +1112,25 @@ export class Aura {
     const s = this.snapshot()
     this.changeFns.forEach((fn) => fn(s))
   }
+}
+
+function normTopic(t: string): string {
+  const w = t.trim().toLowerCase()
+  return w.length > 4 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w
+}
+
+function kindToday(list: Array<{ t: number }>): number {
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  return list.filter((k) => k.t >= start.getTime()).length
+}
+
+function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+function fmtHour(h: number): string {
+  return `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}`
 }
 
 /** The end goal: not "be happy", but "come back faster" */
