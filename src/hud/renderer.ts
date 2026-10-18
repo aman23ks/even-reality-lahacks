@@ -12,6 +12,8 @@ import {
   TextContainerProperty,
   TextContainerUpgrade,
   ImageRawDataUpdate,
+  MenuContainerProperty,
+  MenuItemProperty,
 } from '@evenrealities/even_hub_sdk'
 import type { Glasses } from '../platform/glasses'
 import { api } from '../api'
@@ -39,6 +41,12 @@ export class HudRenderer {
   private lastMirrorPost = 0
   private mirrorTimer?: ReturnType<typeof setTimeout>
   caption = ''
+  /** AuraPet's entries in the G2 long-press menu (omitting them on rebuild would clear the menu) */
+  menuItems: Array<{ itemID: number; itemName: string }> = []
+
+  private menu(): MenuContainerProperty | undefined {
+    return this.menuItems.length ? new MenuContainerProperty({ menuItems: this.menuItems.map((m) => new MenuItemProperty(m)) }) : undefined
+  }
 
   constructor(private glasses: Glasses) {
     glasses.onLifecycle((s) => {
@@ -137,18 +145,18 @@ export class HudRenderer {
 
         if (!this.startupDone) {
           const res = await bridge.createStartUpPageContainer(
-            new CreateStartUpPageContainer({ containerTotalNum, textObject, imageObject }),
+            new CreateStartUpPageContainer({ containerTotalNum, textObject, imageObject, menuObject: this.menu() }),
           )
           diag.startupPageResult = Number(res)
           diagEvent('startup_page', res)
           // Non-zero usually means another instance/page already exists; fall back to rebuild
           if (Number(res) !== 0) {
-            await bridge.rebuildPageContainer(new RebuildPageContainer({ containerTotalNum, textObject, imageObject }))
+            await bridge.rebuildPageContainer(new RebuildPageContainer({ containerTotalNum, textObject, imageObject, menuObject: this.menu() }))
           }
           this.startupDone = true
         } else {
           const ok = await bridge.rebuildPageContainer(
-            new RebuildPageContainer({ containerTotalNum, textObject, imageObject }),
+            new RebuildPageContainer({ containerTotalNum, textObject, imageObject, menuObject: this.menu() }),
           )
           if (!ok) {
             diagEvent('rebuild_failed', frame.layout)

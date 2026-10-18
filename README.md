@@ -50,6 +50,10 @@ Privacy: audio and transcripts are processed in memory and never stored. Only mo
 | Judge tour | Start reset (when nudged) | Skip step | Restart (at Zenith) | *(G2 system menu)* |
 | Bloom / evolution / support | Close | — | Close | — |
 
+**Hands-free and menu controls** (while AuraPet is open):
+- Say **"Mochi, learn my voice"** → voice fingerprint · **"start the tour"** → judge tour · **"stop the tour"** → exit it
+- **Long-press** (G2 menu) also lists **Learn my voice · Start judge tour · Exit judge tour**
+
 ## Run it
 
 ```bash

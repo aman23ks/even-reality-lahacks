@@ -34,6 +34,7 @@ export class Glasses {
   private audioFns: Fn<AudioFrame>[] = []
   private imuFns: Fn<{ x: number; y: number; z: number }>[] = []
   private lifecycleFns: Fn<Lifecycle>[] = []
+  private menuFns: Fn<number>[] = []
   private lastInput = { type: '', at: 0 }
 
   async connect(timeoutMs = 4000): Promise<boolean> {
@@ -83,6 +84,10 @@ export class Glasses {
   }
   onLifecycle(fn: Fn<Lifecycle>): void {
     this.lifecycleFns.push(fn)
+  }
+  /** An item from AuraPet's entries in the G2 long-press menu was chosen */
+  onMenu(fn: Fn<number>): void {
+    this.menuFns.push(fn)
   }
 
   async openMic(source: 'glasses' | 'phone'): Promise<boolean> {
@@ -160,6 +165,13 @@ export class Glasses {
       // Ring / source-aware presses arrive as sysEvents
       const input = mapInput(type)
       if (input) this.input(input)
+      return
+    }
+
+    const menu = event.menuItemClickEvent
+    if (menu && typeof menu.itemID === 'number') {
+      diagEvent('menu', menu.itemID)
+      for (const fn of this.menuFns) fn(menu.itemID)
       return
     }
 

@@ -55,6 +55,9 @@ export interface AuraSnapshot {
 
 const MAX_BASELINE = 40
 
+/** Item IDs for AuraPet's entries in the G2 long-press menu */
+const MENU = { voice: 1, judge: 2, exitJudge: 3 }
+
 type NoticeKind = 'repair' | 'room' | 'kind' | 'forecast' | 'badge' | 'pb' | 'self'
 
 export type JudgeFeature = 'storm' | 'kind' | 'repair' | 'room' | 'convo' | 'pace' | 'forecast'
@@ -149,6 +152,13 @@ export class Aura {
     this.applyVoiceprint()
 
     glasses.onInput((t) => this.onInput(t))
+    // Entries in the G2 long-press menu while AuraPet is open
+    hud.menuItems = [
+      { itemID: MENU.voice, itemName: 'Learn my voice' },
+      { itemID: MENU.judge, itemName: 'Start judge tour' },
+      { itemID: MENU.exitJudge, itemName: 'Exit judge tour' },
+    ]
+    glasses.onMenu((id) => this.onMenu(id))
     segmenter.onUtterance((u) => void this.onUtterance(u))
     segmenter.onSpeechStart(() => this.onSpeechStart())
     segmenter.onOtherUtterance((u) => {
@@ -344,6 +354,9 @@ export class Aura {
       return
     }
 
+    // Voice commands ("Mochi, learn my voice", "start the tour") are instructions, not mood
+    if (this.voiceCommand(transcript)) return
+
     if (c.crisis) {
       this.showCrisis()
       return
@@ -472,6 +485,36 @@ export class Aura {
         break
     }
     this.changed()
+  }
+
+  // ── Glasses menu + voice commands ───────────────────────────
+
+  private onMenu(id: number): void {
+    if (id === MENU.voice) this.startVoiceCheck()
+    else if (id === MENU.judge) this.startJudgeDemo()
+    else if (id === MENU.exitJudge) this.stopJudgeDemo()
+    this.changed()
+  }
+
+  /** Hands-free controls; returns true if the sentence was a command */
+  private voiceCommand(text: string): boolean {
+    const t = text.toLowerCase().replace(/[^a-z' ]/g, ' ')
+    if (/\b(learn|remember|record|set up|setup|check) (my|the) voice\b|\bvoice (check|setup|fingerprint)\b/.test(t)) {
+      this.startVoiceCheck()
+      diagEvent('voice_command', 'voice_check')
+      return true
+    }
+    if (/\b(start|begin|run|show) (the |a )?(judge )?(tour|demo)\b|\bjudge (mode|tour|demo)\b/.test(t) && !/\b(stop|exit|end)\b/.test(t)) {
+      this.startJudgeDemo()
+      diagEvent('voice_command', 'judge')
+      return true
+    }
+    if (this.judgeMode && /\b(stop|exit|end) (the )?(judge )?(tour|demo|mode)\b/.test(t)) {
+      this.stopJudgeDemo()
+      diagEvent('voice_command', 'exit_judge')
+      return true
+    }
+    return false
   }
 
   // ── Phone controls ──────────────────────────────────────────
@@ -1273,7 +1316,7 @@ export class Aura {
         if (d.judgeMode) return this.judgeView(base, stage, snap.weather)
         if (now < this.cardUntil) {
           const body = `${pet.name}  -  ${stageLabel(stage)}\nSky: ${snap.weather}\n\nRecoveries: ${pet.recoveries}\n${toNext}`
-          return cardFrame(base(), body, this.pending ? 'tap: start a reset' : 'swipe: judge tour')
+          return cardFrame(base(), body, this.pending ? 'tap: start a reset' : 'swipe: judge tour  ·  say "learn my voice"')
         }
         const whisper = now < this.whisperUntil
         // Quiet lens: while you work, the lens is empty. It reappears briefly when the sky changes.
