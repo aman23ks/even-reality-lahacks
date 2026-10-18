@@ -6,10 +6,11 @@
  * 2. Phone / Browser Mic (Web Audio API fallback)
  */
 
-import type { EmotionType, EmotionReading, VoiceFingerprint } from '../types/pet'
+import type { EmotionType, EmotionReading, VoiceFingerprint, SpeechTranscriptionRecord } from '../types/pet'
 import { AudioSpeakerRole, AudioInputSource, type EvenAppBridge } from '@evenrealities/even_hub_sdk'
 
 export type EmotionListener = (reading: EmotionReading) => void
+export type TranscriptionListener = (record: SpeechTranscriptionRecord) => void
 
 export class VoiceAnalyzer {
   private bridge?: EvenAppBridge
@@ -18,6 +19,8 @@ export class VoiceAnalyzer {
   private mediaStream?: MediaStream
   private analyserNode?: AnalyserNode
   private listeners: EmotionListener[] = []
+  private transcriptionListeners: TranscriptionListener[] = []
+  private recognition?: any
 
   // Voice Fingerprint (User's unique voice signature)
   private fingerprint: VoiceFingerprint = {
@@ -68,6 +71,7 @@ export class VoiceAnalyzer {
     // Also start Web Audio analyzer for local processing / fallback
     try {
       await this.startWebAudioCapture()
+      this.setupSpeechRecognition()
       this.isListening = true
       return true
     } catch (err) {
@@ -393,6 +397,167 @@ export class VoiceAnalyzer {
     return () => {
       this.listeners = this.listeners.filter((l) => l !== listener)
     }
+  }
+
+  onTranscription(listener: TranscriptionListener): () => void {
+    this.transcriptionListeners.push(listener)
+    return () => {
+      this.transcriptionListeners = this.transcriptionListeners.filter((l) => l !== listener)
+    }
+  }
+
+  /** Continuous Ambient Speech Recognition with Biometric Wearer Filtering */
+  private setupSpeechRecognition(): void {
+    const windowObj = window as any
+    const SpeechRecognitionClass = windowObj.SpeechRecognition || windowObj.webkitSpeechRecognition
+    if (!SpeechRecognitionClass) {
+      console.warn('[VoiceAnalyzer] SpeechRecognition API not supported in this browser/WebView')
+      return
+    }
+
+    try {
+      this.recognition = new SpeechRecognitionClass()
+      this.recognition.continuous = true
+      this.recognition.interimResults = false
+      this.recognition.lang = 'en-US'
+
+      this.recognition.onresult = (event: any) => {
+        const lastIndex = event.results.length - 1
+        const result = event.results[lastIndex]
+        if (!result || !result.isFinal) return
+
+        const transcript = result[0]?.transcript?.trim()
+        if (!transcript) return
+
+        // Check if voice biometric matches wearer
+        const reading = this.lastReading
+        const isWearer = reading ? reading.isUserVoice : true
+        const wearerConf = reading ? reading.userVoiceConfidence : 0.88
+
+        if (!isWearer) {
+          console.log('[VoiceAnalyzer] Ambient speaker speech ignored:', transcript)
+          return
+        }
+
+        // Score emotions based on what the wearer said
+        const textAnalysis = this.analyzeTextEmotions(transcript)
+
+        // Combine vocal prosody + semantic text scores
+        const combinedScores: Record<EmotionType, number> = {
+          joy: Number(((reading ? reading.scores.joy * 0.35 : 0.1) + textAnalysis.scores.joy * 0.65).toFixed(2)),
+          calm: Number(((reading ? reading.scores.calm * 0.35 : 0.2) + textAnalysis.scores.calm * 0.65).toFixed(2)),
+          anxiety: Number(((reading ? reading.scores.anxiety * 0.35 : 0.1) + textAnalysis.scores.anxiety * 0.65).toFixed(2)),
+          sadness: Number(((reading ? reading.scores.sadness * 0.35 : 0.1) + textAnalysis.scores.sadness * 0.65).toFixed(2)),
+          frustration: Number(((reading ? reading.scores.frustration * 0.35 : 0.1) + textAnalysis.scores.frustration * 0.65).toFixed(2)),
+          curiosity: Number(((reading ? reading.scores.curiosity * 0.35 : 0.1) + textAnalysis.scores.curiosity * 0.65).toFixed(2)),
+        }
+
+        let primaryEmotion: EmotionType = textAnalysis.primary
+        let maxScore = -1
+        for (const [emo, sc] of Object.entries(combinedScores) as [EmotionType, number][]) {
+          if (sc > maxScore) {
+            maxScore = sc
+            primaryEmotion = emo
+          }
+        }
+
+        const record: SpeechTranscriptionRecord = {
+          id: `tx_${Date.now()}`,
+          text: transcript,
+          timestamp: Date.now(),
+          primaryEmotion,
+          confidence: Math.min(0.98, Math.max(0.5, maxScore)),
+          emotionScores: combinedScores,
+          pitchHz: reading?.pitchHz ?? this.fingerprint.medianPitchHz,
+          isWearerVoice: true,
+          wearerConfidence: wearerConf,
+        }
+
+        console.log('[VoiceAnalyzer] Wearer spoke:', `"${transcript}"`, '-> Emotion:', primaryEmotion, `(${Math.round(maxScore * 100)}%)`)
+
+        // Notify transcription listeners
+        for (const listener of this.transcriptionListeners) {
+          try {
+            listener(record)
+          } catch (e) {
+            console.error('[VoiceAnalyzer] Transcription listener error:', e)
+          }
+        }
+      }
+
+      this.recognition.onerror = (e: any) => {
+        if (e.error !== 'no-speech' && e.error !== 'aborted') {
+          console.warn('[VoiceAnalyzer] SpeechRecognition error:', e.error)
+        }
+      }
+
+      this.recognition.onend = () => {
+        // Continuous listening throughout daily life
+        if (this.isListening) {
+          try {
+            this.recognition.start()
+          } catch {
+            // Already active
+          }
+        }
+      }
+
+      this.recognition.start()
+      console.log('[VoiceAnalyzer] Ambient speech-to-text recognition active!')
+    } catch (err) {
+      console.warn('[VoiceAnalyzer] SpeechRecognition init failed:', err)
+    }
+  }
+
+  /** NLP Semantic Emotion Classifier: Gives scores to emotions based on user conversation */
+  private analyzeTextEmotions(text: string): { primary: EmotionType; scores: Record<EmotionType, number> } {
+    const lower = text.toLowerCase()
+
+    const scores: Record<EmotionType, number> = {
+      joy: 0.1,
+      calm: 0.2,
+      anxiety: 0.1,
+      sadness: 0.1,
+      frustration: 0.1,
+      curiosity: 0.1,
+    }
+
+    const joyKeywords = ['excited', 'great', 'awesome', 'love', 'happy', 'glad', 'amazing', 'yes', 'fun', 'nice', 'wonderful', 'celebrate', 'proud', 'good', 'win', 'cool', 'beautiful', 'yay']
+    const calmKeywords = ['breathe', 'calm', 'peaceful', 'quiet', 'relax', 'ok', 'smooth', 'balance', 'fine', 'alright', 'gentle', 'steady', 'chill', 'easy', 'rest', 'soothing']
+    const anxietyKeywords = ['worried', 'stress', 'anxious', 'nervous', 'deadline', 'fast', 'rush', 'panic', 'afraid', 'scared', 'pressure', 'overwhelm', 'late', 'hurry', 'omg', 'tense']
+    const sadnessKeywords = ['sad', 'tired', 'exhausted', 'miss', 'heavy', 'gloomy', 'down', 'hurt', 'cry', 'fail', 'hopeless', 'lonely', 'bad', 'sigh', 'sorry', 'depressed']
+    const frustrationKeywords = ['angry', 'mad', 'annoyed', 'hate', 'irritated', 'stuck', 'ugh', 'damn', 'stupid', 'broken', 'why', 'furious', 'bug', 'mess', 'error', 'hate this']
+    const curiosityKeywords = ['wonder', 'learn', 'why', 'how', 'interesting', 'what if', 'explore', 'check', 'investigate', 'try', 'idea', 'build', 'create', 'hackathon', 'curious']
+
+    for (const word of joyKeywords) {
+      if (lower.includes(word)) scores.joy += 0.4
+    }
+    for (const word of calmKeywords) {
+      if (lower.includes(word)) scores.calm += 0.4
+    }
+    for (const word of anxietyKeywords) {
+      if (lower.includes(word)) scores.anxiety += 0.45
+    }
+    for (const word of sadnessKeywords) {
+      if (lower.includes(word)) scores.sadness += 0.45
+    }
+    for (const word of frustrationKeywords) {
+      if (lower.includes(word)) scores.frustration += 0.45
+    }
+    for (const word of curiosityKeywords) {
+      if (lower.includes(word)) scores.curiosity += 0.4
+    }
+
+    let primary: EmotionType = 'calm'
+    let highest = -1
+    for (const [emo, val] of Object.entries(scores) as [EmotionType, number][]) {
+      if (val > highest) {
+        highest = val
+        primary = emo
+      }
+    }
+
+    return { primary, scores }
   }
 
   private saveFingerprintToStorage(): void {

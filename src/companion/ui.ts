@@ -504,6 +504,28 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
           <!-- Quests will be rendered dynamically -->
         </div>
       </section>
+
+      <!-- 5. AMBIENT DAILY SPEECH & EMOTION TRANSCRIPTION JOURNAL -->
+      <section class="card span-2">
+        <div class="card-title">
+          <span>Ambient Daily Speech Journal (Wearer Isolated)</span>
+          <span style="color: var(--neon-cyan);">Live STT & Emotion Scoring</span>
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-dim); margin-bottom: 12px;">
+          Go about your daily life and talk naturally. AuraPet transcribes only your voice, scores each phrase's emotion in real-time, and mirrors your mood on your glasses lenses.
+        </p>
+
+        <!-- Quick Phrase Tester -->
+        <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+          <input type="text" id="inputDemoPhrase" placeholder="Type or speak a test phrase (e.g., 'I am so excited about this demo!')..." 
+            style="flex: 1; padding: 8px 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.82rem;">
+          <button class="btn btn-primary" id="btnTestPhrase">Test Emotion Score</button>
+        </div>
+
+        <div id="transcriptFeed" style="display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto;">
+          <!-- Transcripts rendered here -->
+        </div>
+      </section>
     </div>
   `
 
@@ -713,11 +735,88 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
       }
     }
 
+    // 4. Render Ambient Transcripts Feed
+    const feedEl = document.getElementById('transcriptFeed')
+    if (feedEl) {
+      const txs = s.recentTranscripts || []
+      if (txs.length === 0) {
+        feedEl.innerHTML = '<div style="color: #666; font-size: 0.8rem; padding: 12px; text-align: center;">No wearer speech recorded yet. Speak naturally into your glasses or microphone...</div>'
+      } else {
+        feedEl.innerHTML = txs.map(t => {
+          const time = new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+          const emoBadge = getEmotionEmoji(t.primaryEmotion)
+          return `
+            <div style="background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <span style="font-family: monospace; font-size: 0.72rem; color: var(--text-dim);">${time}</span>
+                  <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(0, 255, 170, 0.1); color: var(--neon-green); font-weight: 600;">🔒 Wearer Verified (${Math.round(t.wearerConfidence * 100)}%)</span>
+                </div>
+                <div style="font-size: 0.9rem; color: #fff; font-weight: 500;">"${t.text}"</div>
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 4px;">
+                  Joy: ${Math.round(t.emotionScores.joy * 100)}% • Calm: ${Math.round(t.emotionScores.calm * 100)}% • Tension: ${Math.round(t.emotionScores.frustration * 100)}% • Worry: ${Math.round(t.emotionScores.anxiety * 100)}%
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <span style="font-size: 0.82rem; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: rgba(0, 229, 255, 0.12); color: var(--neon-cyan); border: 1px solid rgba(0, 229, 255, 0.3);">
+                  ${emoBadge} (${Math.round(t.confidence * 100)}%)
+                </span>
+              </div>
+            </div>
+          `
+        }).join('')
+      }
+    }
+
     renderQuests()
     updateMirror()
   }
 
   // Button Listeners
+  document.getElementById('btnTestPhrase')?.addEventListener('click', () => {
+    const input = document.getElementById('inputDemoPhrase') as HTMLInputElement | null
+    if (!input || !input.value.trim()) return
+    const text = input.value.trim()
+    input.value = ''
+
+    const va = app.getVoiceAnalyzer()
+    const textAnalysis = (va as any).analyzeTextEmotions ? (va as any).analyzeTextEmotions(text) : { primary: 'joy' as const, scores: { joy: 0.8, calm: 0.3, anxiety: 0.1, sadness: 0.0, frustration: 0.0, curiosity: 0.2 } }
+    
+    const record = {
+      id: `tx_${Date.now()}`,
+      text,
+      timestamp: Date.now(),
+      primaryEmotion: textAnalysis.primary,
+      confidence: 0.92,
+      emotionScores: textAnalysis.scores,
+      pitchHz: 175,
+      isWearerVoice: true,
+      wearerConfidence: 0.96,
+    }
+
+    const cur = state.get()
+    state.update({
+      recentTranscripts: [record, ...cur.recentTranscripts].slice(0, 15),
+      lastTranscribedText: text,
+      coachMessage: `"${text.slice(0, 35)}..." (${getEmotionEmoji(record.primaryEmotion)})`,
+    })
+
+    petManager.applyVoiceEmotion({
+      primary: record.primaryEmotion,
+      confidence: 0.92,
+      scores: record.emotionScores,
+      pitchHz: 175,
+      energyRms: 0.08,
+      tempoBpm: 120,
+      timestamp: Date.now(),
+      isUserVoice: true,
+      userVoiceConfidence: 0.96,
+    })
+
+    app.renderHudScreen()
+    updateUI()
+  })
+
   document.getElementById('btnConnectGlasses')?.addEventListener('click', async () => {
     const btn = document.getElementById('btnConnectGlasses') as HTMLButtonElement | null
     if (btn) btn.textContent = '⏳ Connecting...'

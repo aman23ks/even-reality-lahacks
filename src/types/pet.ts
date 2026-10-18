@@ -22,6 +22,18 @@ export interface EmotionReading {
   userVoiceConfidence: number
 }
 
+export interface SpeechTranscriptionRecord {
+  id: string
+  text: string
+  timestamp: number
+  primaryEmotion: EmotionType
+  confidence: number
+  emotionScores: Record<EmotionType, number>
+  pitchHz: number
+  isWearerVoice: boolean
+  wearerConfidence: number
+}
+
 // 4 distinct physical growth stages from small to giant
 export type PetStage = 'hatchling' | 'wisp' | 'juvenile' | 'ascended'
 

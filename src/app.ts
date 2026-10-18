@@ -228,6 +228,36 @@ export class AuraPetApp {
         await this.renderHudScreen()
       }
     })
+
+    // Listen to continuous Wearer Speech Transcriptions
+    this.voiceAnalyzer.onTranscription(async (tx) => {
+      const cur = this.state.get()
+      const list = [tx, ...cur.recentTranscripts].slice(0, 15)
+
+      this.state.update({
+        recentTranscripts: list,
+        lastTranscribedText: tx.text,
+        coachMessage: `"${tx.text.slice(0, 35)}..." (${getEmotionEmoji(tx.primaryEmotion)})`,
+        activePet: this.petManager.getActivePet(),
+        emotionPoints: this.petManager.getEmotionPoints(),
+        endGoal: this.petManager.getEndGoalStatus(),
+      })
+
+      // Ingest transcription emotion into Pet Manager
+      this.petManager.applyVoiceEmotion({
+        primary: tx.primaryEmotion,
+        confidence: tx.confidence,
+        scores: tx.emotionScores,
+        pitchHz: tx.pitchHz,
+        energyRms: 0.08,
+        tempoBpm: 120,
+        timestamp: tx.timestamp,
+        isUserVoice: true,
+        userVoiceConfidence: tx.wearerConfidence,
+      })
+
+      await this.renderHudScreen()
+    })
   }
 
   /** Start continuous listening */

@@ -2,7 +2,7 @@
  * src/state.ts — AuraPet State Manager
  */
 
-import type { Pet, EmotionReading, WellnessQuest, ActiveHudScreen, EmotionPointsRecord, EndGoalStatus } from './types/pet'
+import type { Pet, EmotionReading, WellnessQuest, ActiveHudScreen, EmotionPointsRecord, EndGoalStatus, SpeechTranscriptionRecord } from './types/pet'
 
 export interface AppState {
   currentScreen: ActiveHudScreen
@@ -16,6 +16,8 @@ export interface AppState {
   activeQuests: WellnessQuest[]
   emotionPoints: EmotionPointsRecord
   endGoal: EndGoalStatus
+  recentTranscripts: SpeechTranscriptionRecord[]
+  lastTranscribedText: string
   coachMessage: string
   backendOnline: boolean
   lastHudSync: number
@@ -69,6 +71,20 @@ export class StateManager {
         isAwakened: false,
         currentAscensionRank: 'Novice Seeker (Sprout)',
       },
+      recentTranscripts: [
+        {
+          id: 'init_tx_1',
+          text: 'Starting my day with AuraPet on my Even Reality glasses.',
+          timestamp: Date.now() - 60000,
+          primaryEmotion: 'calm',
+          confidence: 0.92,
+          emotionScores: { joy: 0.2, calm: 0.7, anxiety: 0.1, sadness: 0.0, frustration: 0.0, curiosity: 0.3 },
+          pitchHz: 165,
+          isWearerVoice: true,
+          wearerConfidence: 0.95,
+        }
+      ],
+      lastTranscribedText: 'Starting my day with AuraPet on my Even Reality glasses.',
       coachMessage: 'Speak naturally to bond with your pet...',
       backendOnline: false,
       lastHudSync: Date.now(),
