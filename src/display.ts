@@ -166,7 +166,7 @@ export class DisplayManager {
     isStartup = false
   ): Promise<number> {
     const containers = [
-      // Left container: Pet ASCII Art + Stage
+      // Left container: Pet ASCII Art + Stage (Captures tap events)
       this.createText({
         id: 1,
         name: 'pet_display',
@@ -178,7 +178,7 @@ export class DisplayManager {
         interactive: true,
         textColor: 4,
       }),
-      // Right container: Mood, XP, Prompt & Controls
+      // Right container: Mood, XP, Prompt & Controls (Display only)
       this.createText({
         id: 2,
         name: 'pet_stats',
@@ -187,7 +187,7 @@ export class DisplayManager {
         y: 0,
         width: 306,
         height: 288,
-        interactive: true,
+        interactive: false,
         textColor: 4,
       }),
     ]

@@ -311,10 +311,11 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
           <span style="font-size: 0.75rem; color: var(--neon-green);" id="activeScreenTag">PET COMPANION HUD</span>
         </div>
         <pre class="g2-hud-screen" id="hudMirror">Loading G2 HUD Display...</pre>
-        <div class="sim-controls">
-          <button class="btn btn-primary" id="btnSimTap">👆 Tap Temple (Pet/Action)</button>
-          <button class="btn" id="btnSimSwipeFwd">👉 Swipe Fwd (Quests)</button>
-          <button class="btn" id="btnSimSwipeBack">👈 Swipe Back (HUD)</button>
+        <div class="sim-controls" style="flex-wrap: wrap;">
+          <button class="btn btn-primary" id="btnConnectGlasses" style="background: linear-gradient(135deg, #00ffaa, #00e5ff); color: #0a0e14; font-weight: 700;">👓 Send HUD to Glasses Lens</button>
+          <button class="btn btn-primary" id="btnSimTap">👆 Tap Temple</button>
+          <button class="btn" id="btnSimSwipeFwd">👉 Swipe Quests</button>
+          <button class="btn" id="btnSimSwipeBack">👈 Swipe HUD</button>
           <button class="btn" id="btnCalibrate">🎙️ Calibrate Voice</button>
         </div>
       </section>
@@ -576,7 +577,18 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
     updateMirror()
   }
 
-  // Wire simulator buttons
+  // Wire simulator & glasses push buttons
+  document.getElementById('btnConnectGlasses')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btnConnectGlasses') as HTMLButtonElement | null
+    if (btn) btn.textContent = '⏳ Connecting...'
+    await app.reconnectGlasses()
+    if (btn) btn.textContent = '✓ Sent to Glasses!'
+    setTimeout(() => {
+      if (btn) btn.textContent = '👓 Send HUD to Glasses Lens'
+    }, 2500)
+    updateUI()
+  })
+
   document.getElementById('btnSimTap')?.addEventListener('click', async () => {
     const cur = state.get().currentScreen
     if (cur === 'pet') {

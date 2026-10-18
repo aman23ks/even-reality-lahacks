@@ -296,8 +296,11 @@ export class AuraPetApp {
         ].join('\n')
 
         if (isStartup || !this.startupRendered) {
-          await this.display.renderPetHud(leftText, rightText, true)
-          this.startupRendered = true
+          const res = await this.display.renderPetHud(leftText, rightText, true)
+          console.log('[AuraPet] Startup render result code:', res)
+          if (res === 0) {
+            this.startupRendered = true
+          }
         } else {
           // Fast in-place container text upgrade
           await this.display.updateText(1, 'pet_display', leftText)
@@ -386,5 +389,13 @@ export class AuraPetApp {
     } else {
       console.warn('[AuraPet] Backend unreachable, operating in autonomous edge mode')
     }
+  }
+
+  /** Force re-render startup page to glasses lens */
+  async reconnectGlasses(): Promise<number> {
+    console.log('[AuraPet] Forcing startup page push to glasses...')
+    this.startupRendered = false
+    await this.renderHudScreen(true)
+    return 0
   }
 }
