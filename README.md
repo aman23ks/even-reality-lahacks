@@ -41,12 +41,14 @@ Privacy: audio and transcripts are processed in memory and never stored. Only mo
 
 ## Glasses controls
 
-| Where | Tap | Swipe | Double tap |
-|---|---|---|---|
-| Ambient | Pet card (or start a waiting reset) | Pet card | Exit |
-| Nudge | Start reset | Not now | Not now |
-| Reset | — | Try a different reset | Stop |
-| Bloom / evolution / support | Close | — | Close |
+| Where | Tap | Swipe | Double tap | Long-press |
+|---|---|---|---|---|
+| Ambient | Pet card (or start a waiting reset) | Pet card | Exit | **Start judge tour** |
+| Pet card | Close | — | Close | Voice check |
+| Nudge | Start reset | Not now | Not now | — |
+| Reset | — | Try a different reset | Stop | — |
+| Judge tour | Start reset (when nudged) | Skip step | Restart (at Zenith) | Restart tour |
+| Bloom / evolution / support | Close | — | Close | — |
 
 ## Run it
 
@@ -71,7 +73,7 @@ No glasses? Open `http://localhost:5173` in a browser and use **"Try it by typin
 
 1. Phone: Even App → Even Hub → **AuraPet** → install the Beta build, then open it.
 2. On the phone, follow the 4-step onboarding, then say **"Hi Mochi"** to hatch.
-3. Optional: **long-press the temple** for the 3-sentence voice check (teaches it your voice).
+3. **Long-press the temple** to start the judge tour from the glasses. Optional voice check: tap (pet card), then long-press.
 4. Phone → Settings → **Demo mode** (short timers). **Demo shortcuts → "Next → Wisp"** lets the next real recovery trigger an evolution.
 5. Vent two stressed sentences → *Storm brewing* → tap → answer the reset out loud → calm down → recovery.
 

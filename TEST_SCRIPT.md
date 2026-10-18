@@ -39,7 +39,7 @@ Then on the phone: **Settings → Demo mode ON**.
 
 ## 2. Voice check (teaches it YOUR voice)
 
-**Long-press the temple** (or phone: Settings → Voice check → Start).
+**Tap** to open the pet card, then **long-press the temple** (or phone: Settings → Voice check → Start). A long-press on the main screen starts the judge tour instead.
 👓 *"Voice check 1/3 — Read aloud…"* Read each line shown:
 
 > 🗣 **"Hi, this is my normal speaking voice."**
