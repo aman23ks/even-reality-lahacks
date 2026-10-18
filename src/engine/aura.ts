@@ -100,6 +100,8 @@ export class Aura {
   /** Judge runs collect their own badges so a demo never touches the owner's trophies */
   private judgeBadges = new Set<BadgeId>()
   private voiceSamples: VoiceFeatures[] = []
+  /** the voiceprint before a voice check started, restored only if that check is cancelled */
+  private previousVoiceprint: import('../audio/voiceprint').Voiceprint | null = null
   /** last sentence's voiceprint match (for the phone), null = no voiceprint */
   lastVoiceMatch: { score: number; you: boolean } | null = null
   private judgePbMs = 0
@@ -428,11 +430,7 @@ export class Aura {
       case 'hatching':
         break
       case 'voicecheck':
-        if (t === 'double_tap') {
-          this.applyVoiceThreshold()
-          this.applyVoiceprint()
-          this.toIdle()
-        }
+        if (t === 'double_tap') this.cancelVoiceCheck()
         break
       case 'idle':
         // A 1s long-press opens the G2 system menu, so app gestures avoid it:
@@ -880,6 +878,9 @@ export class Aura {
     this.active = null
     this.voiceStep = 0
     this.voiceSamples = []
+    // A new voice check replaces the old voice entirely (kept aside only in case this one is cancelled)
+    this.previousVoiceprint = this.store.data.voiceprint
+    this.store.data.voiceprint = null
     this.store.data.baseline.selfRatio = []
     this.segmenter.selfThreshold = 0 // accept everything while sampling
     this.segmenter.useVoiceprint = false
@@ -896,12 +897,13 @@ export class Aura {
       this.applyVoiceThreshold()
       // Voice fingerprint from the three sentences
       const vp = buildVoiceprint(this.voiceSamples)
-      if (vp) this.store.data.voiceprint = vp
+      this.store.data.voiceprint = vp // only the new voice; never the old one
+      this.previousVoiceprint = null
       this.applyVoiceprint()
       this.store.save()
       this.hud.caption = vp
         ? `Voiceprint saved (${vp.samples} sentences, ~${Math.round(vp.pitch)} Hz). Only your voice counts now.`
-        : `Voice tuned: your speech is tagged as you ${Math.round(median(this.store.data.baseline.selfRatio, 0) * 100)}% of the time`
+        : "Couldn't hear enough to learn your voice. Say 'learn my voice' to try again."
       diagEvent('voice_check_done', {
         samples: this.store.data.baseline.selfRatio,
         threshold: this.segmenter.selfThreshold,
@@ -910,6 +912,15 @@ export class Aura {
       this.setPhase('idle')
     }
     this.changed()
+  }
+
+  private cancelVoiceCheck(): void {
+    if (!this.store.data.voiceprint && this.previousVoiceprint) this.store.data.voiceprint = this.previousVoiceprint
+    this.previousVoiceprint = null
+    this.applyVoiceThreshold()
+    this.applyVoiceprint()
+    this.store.save()
+    if (this.phase === 'voicecheck') this.toIdle()
   }
 
   /** Voiceprint on in normal use, off in judge mode (a judge's voice won't match the owner's) */
@@ -1151,10 +1162,7 @@ export class Aura {
 
     if (this.phaseUntil && now > this.phaseUntil) {
       this.phaseUntil = 0
-      if (this.phase === 'voicecheck') {
-        this.applyVoiceThreshold()
-        this.applyVoiceprint()
-      }
+      if (this.phase === 'voicecheck') this.cancelVoiceCheck()
       if (['bloom', 'cleared', 'evolving', 'voicecheck', 'intro'].includes(this.phase)) this.toIdle()
     }
     if (this.phase === 'nudged' && now - this.nudgeShownAt > this.timings().nudgeVisibleMs) {
