@@ -1,13 +1,13 @@
 /**
- * src/companion/ui.ts — Mobile Companion Dashboard & G2 HUD Simulator
+ * src/companion/ui.ts — Mobile Companion Dashboard, G2 HUD Simulator & The Zenith End Goal
  * 
- * Renders an interface on the phone WebView / laptop browser:
+ * Features:
  * - Real-time G2 576x288 HUD mirror
- * - Live Voice Activity & Emotion Prosody visualizer
- * - VoidPet status, level-up & happiness bars
- * - Wellness micro-step quests (earn points & improve mood)
- * - Elemental Breeding Lab
- * - Voice Fingerprint enrollment
+ * - Visible Pet Growth from Tiny Hatchling -> Giant Ascended Guardian
+ * - Emotion Points for BOTH negative and positive emotions
+ * - Micro-remedies to guide users into a positive mood
+ * - Defined End Goal: Awakening the Zenith Harmony Guardian
+ * - Biometric Wearer Voice Isolation & Fingerprinting
  */
 
 import type { AuraPetApp } from '../app'
@@ -23,13 +23,14 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
     :root {
-      --bg-dark: #0a0e14;
-      --card-bg: rgba(18, 26, 36, 0.75);
-      --card-border: rgba(0, 255, 170, 0.18);
+      --bg-dark: #070a0e;
+      --card-bg: rgba(14, 21, 30, 0.85);
+      --card-border: rgba(0, 255, 170, 0.22);
       --neon-green: #00ffaa;
       --neon-cyan: #00e5ff;
       --neon-amber: #ffb703;
       --neon-pink: #ff3366;
+      --neon-purple: #b5179e;
       --text-main: #f0f6fc;
       --text-dim: #8b949e;
     }
@@ -42,15 +43,15 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
       min-height: 100vh;
       padding: 16px;
       background-image: 
-        radial-gradient(ellipse at 20% 10%, rgba(0, 255, 170, 0.08) 0%, transparent 40%),
-        radial-gradient(ellipse at 80% 80%, rgba(0, 229, 255, 0.08) 0%, transparent 50%);
+        radial-gradient(ellipse at 15% 15%, rgba(0, 255, 170, 0.09) 0%, transparent 45%),
+        radial-gradient(ellipse at 85% 85%, rgba(0, 229, 255, 0.09) 0%, transparent 55%);
     }
 
     .dashboard-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 16px;
+      padding: 14px 18px;
       margin-bottom: 16px;
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -59,7 +60,7 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
     }
 
     .title-group h1 {
-      font-size: 1.4rem;
+      font-size: 1.5rem;
       font-weight: 700;
       background: linear-gradient(135deg, #00ffaa 0%, #00e5ff 100%);
       -webkit-background-clip: text;
@@ -69,11 +70,11 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
 
     .status-badge {
       font-size: 0.75rem;
-      padding: 4px 10px;
+      padding: 5px 12px;
       border-radius: 20px;
       background: rgba(0, 255, 170, 0.12);
       color: var(--neon-green);
-      border: 1px solid rgba(0, 255, 170, 0.3);
+      border: 1px solid rgba(0, 255, 170, 0.35);
       font-weight: 600;
       display: flex;
       align-items: center;
@@ -99,7 +100,7 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
       display: grid;
       grid-template-columns: 1fr;
       gap: 16px;
-      max-width: 900px;
+      max-width: 950px;
       margin: 0 auto;
     }
 
@@ -116,13 +117,13 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 14px;
-      padding: 16px;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      padding: 18px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.4);
     }
 
     .card-title {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       text-transform: uppercase;
       letter-spacing: 0.8px;
       color: var(--text-dim);
@@ -130,6 +131,31 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
       display: flex;
       justify-content: space-between;
       align-items: center;
+    }
+
+    /* End Goal Hero Card */
+    .end-goal-card {
+      background: linear-gradient(135deg, rgba(181, 23, 158, 0.15) 0%, rgba(0, 229, 255, 0.12) 100%), var(--card-bg);
+      border: 1px solid rgba(181, 23, 158, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .end-goal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .rank-badge {
+      background: linear-gradient(135deg, #b5179e, #00e5ff);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      text-transform: uppercase;
     }
 
     /* G2 HUD Simulator */
@@ -159,11 +185,11 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
       letter-spacing: 1px;
     }
 
-    /* Controls bar for simulation */
     .sim-controls {
       display: flex;
       gap: 8px;
       margin-top: 10px;
+      flex-wrap: wrap;
     }
 
     .btn {
@@ -194,14 +220,86 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
       color: var(--neon-green);
     }
 
-    /* Pet Card */
-    .pet-stats-row {
+    /* Pet Growth Visualizer */
+    .pet-growth-box {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      gap: 16px;
+      margin-bottom: 14px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 12px;
     }
 
+    .pet-ascii-avatar {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--neon-green);
+      white-space: pre;
+      line-height: 1.25;
+      transition: transform 0.4s ease;
+      background: rgba(0, 255, 170, 0.05);
+      border: 1px dashed rgba(0, 255, 170, 0.25);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .growth-stage-indicator {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .growth-dot {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      transition: background 0.3s;
+    }
+
+    .growth-dot.active {
+      background: var(--neon-green);
+      box-shadow: 0 0 6px var(--neon-green);
+    }
+
+    /* Emotion Points Grid (All Emotions Give Points!) */
+    .emotion-points-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .emotion-point-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .emotion-point-chip.active {
+      border-color: var(--neon-cyan);
+      background: rgba(0, 229, 255, 0.08);
+    }
+
+    .emotion-point-chip .label {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .emotion-point-chip .pts {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Progress bar */
     .progress-bar-bg {
       background: rgba(255, 255, 255, 0.08);
       height: 8px;
@@ -217,25 +315,12 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
       transition: width 0.3s ease;
     }
 
-    /* Voice & Emotion Card */
-    .emotion-badge-large {
-      display: inline-block;
-      padding: 6px 14px;
-      border-radius: 8px;
-      background: rgba(0, 229, 255, 0.12);
-      border: 1px solid var(--neon-cyan);
-      color: var(--neon-cyan);
-      font-weight: 700;
-      font-size: 1rem;
-      margin-bottom: 10px;
-    }
-
     .voice-metric {
       display: flex;
       justify-content: space-between;
       padding: 6px 0;
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      font-size: 0.85rem;
+      font-size: 0.82rem;
     }
 
     /* Quests Checklist */
@@ -248,54 +333,21 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: all 0.2s;
     }
 
     .quest-item.completed {
       opacity: 0.45;
       text-decoration: line-through;
     }
-
-    .quest-info h4 {
-      font-size: 0.95rem;
-      margin-bottom: 3px;
-    }
-
-    .quest-info p {
-      font-size: 0.8rem;
-      color: var(--text-dim);
-    }
-
-    .quest-reward {
-      font-size: 0.8rem;
-      color: var(--neon-amber);
-      font-weight: 600;
-    }
-
-    /* Breeding Sanctuary */
-    .essence-vault {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .essence-pill {
-      background: rgba(255, 255, 255, 0.04);
-      padding: 6px 8px;
-      border-radius: 8px;
-      text-align: center;
-      font-size: 0.8rem;
-    }
   `
   document.head.appendChild(styleEl)
 
-  // Render Skeleton
+  // Render HTML Frame
   root.innerHTML = `
     <header class="dashboard-header">
       <div class="title-group">
         <h1>✨ AuraPet G2</h1>
-        <div style="font-size: 0.8rem; color: var(--text-dim);">VoidPet Companion for Even Reality Smart Glasses</div>
+        <div style="font-size: 0.8rem; color: var(--text-dim);">Emotional Voice Companion for Even Reality Smart Glasses</div>
       </div>
       <div class="status-badge" id="hudStatus">
         <span class="pulse-dot"></span>
@@ -304,6 +356,30 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
     </header>
 
     <div class="grid-container">
+      <!-- 0. THE END GOAL HERO BANNER -->
+      <section class="card span-2 end-goal-card">
+        <div class="end-goal-header">
+          <div>
+            <h2 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 4px;" id="goalTitle">
+              🏆 End Goal: Awaken the Zenith Harmony Guardian
+            </h2>
+            <p style="font-size: 0.8rem; color: #cbd5e1; max-width: 650px;" id="goalDesc">
+              Resilience is NOT feeling happy 24/7. It is listening to ALL 5 emotions (Joy, Calm, Anxiety, Sadness, Anger) and transforming them into inner power.
+            </p>
+          </div>
+          <span class="rank-badge" id="ascensionRankTag">Novice Seeker (Sprout)</span>
+        </div>
+        <div style="margin-top: 10px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 4px;">
+            <span style="color: var(--neon-cyan);">Emotional Equilibrium Score (Balance all 5 feelings):</span>
+            <strong id="equilibriumPercentText" style="color: var(--neon-green);">35%</strong>
+          </div>
+          <div class="progress-bar-bg" style="height: 10px;">
+            <div class="progress-bar-fill" id="equilibriumBar" style="width: 35%; background: linear-gradient(90deg, #00ffaa, #00e5ff, #b5179e);"></div>
+          </div>
+        </div>
+      </section>
+
       <!-- 1. G2 HUD MIRROR -->
       <section class="card span-2">
         <div class="card-title">
@@ -311,111 +387,121 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
           <span style="font-size: 0.75rem; color: var(--neon-green);" id="activeScreenTag">PET COMPANION HUD</span>
         </div>
         <pre class="g2-hud-screen" id="hudMirror">Loading G2 HUD Display...</pre>
-        <div class="sim-controls" style="flex-wrap: wrap;">
+        <div class="sim-controls">
           <button class="btn btn-primary" id="btnConnectGlasses" style="background: linear-gradient(135deg, #00ffaa, #00e5ff); color: #0a0e14; font-weight: 700;">👓 Send HUD to Glasses Lens</button>
-          <button class="btn btn-primary" id="btnSimTap">👆 Tap Temple</button>
-          <button class="btn" id="btnSimSwipeFwd">👉 Swipe Quests</button>
-          <button class="btn" id="btnSimSwipeBack">👈 Swipe HUD</button>
-          <button class="btn" id="btnCalibrate">🎙️ Calibrate Voice</button>
+          <button class="btn btn-primary" id="btnSimTap">👆 Tap Temple (Pet/Action)</button>
+          <button class="btn" id="btnSimSwipeFwd">👉 Swipe (Quests/Goal)</button>
+          <button class="btn" id="btnSimSwipeBack">👈 Swipe Back</button>
+          <button class="btn" id="btnCalibrate">🎙️ Calibrate My Voice</button>
         </div>
       </section>
 
-      <!-- 2. VOICE FINGERPRINT & EMOTION DETECTION -->
+      <!-- 2. VOIDPET STATUS & VISIBLE GROWTH -->
       <section class="card">
         <div class="card-title">
-          <span>Voice Fingerprint & Emotion</span>
-          <span style="font-size: 0.75rem; color: var(--neon-cyan);" id="voiceMatchBadge">Fingerprint: Ready</span>
+          <span>Visible Pet Growth</span>
+          <span style="color: var(--neon-amber);" id="petLevelTag">Lvl 1 HATCHLING</span>
         </div>
         <div>
-          <div class="emotion-badge-large" id="currentEmotionBadge">☀️ JOY (88%)</div>
-          <p style="font-size: 0.85rem; color: #a0aec0; margin-bottom: 12px;" id="coachTipText">
-            "Speak naturally to bond with your pet..."
-          </p>
-
-          <div class="voice-metric">
-            <span style="color: var(--text-dim);">Live Pitch (F0):</span>
-            <strong id="metricPitch">165 Hz</strong>
-          </div>
-          <div class="voice-metric">
-            <span style="color: var(--text-dim);">Vocal Energy (RMS):</span>
-            <strong id="metricEnergy">0.082</strong>
-          </div>
-          <div class="voice-metric">
-            <span style="color: var(--text-dim);">Voice Isolation:</span>
-            <strong style="color: var(--neon-green);" id="metricIsolation">Wearer Verified (92%)</strong>
-          </div>
-          <div class="voice-metric">
-            <span style="color: var(--text-dim);">Glasses Audio Input:</span>
-            <strong style="color: var(--neon-cyan);">Continuous Listening</strong>
-          </div>
-        </div>
-      </section>
-
-      <!-- 3. VOIDPET STATUS & EVOLUTION -->
-      <section class="card">
-        <div class="card-title">
-          <span>Active Companion</span>
-          <span style="color: var(--neon-amber);" id="petLevelTag">Lvl 2 WISP</span>
-        </div>
-        <div>
-          <div class="pet-stats-row">
-            <div>
-              <h3 style="font-size: 1.2rem; color: var(--neon-green);" id="petName">Solispark</h3>
-              <div style="font-size: 0.8rem; color: var(--text-dim);" id="petSpecies">Joy Elemental Wisp</div>
+          <!-- Growth visualizer showing ASCII pet scaling -->
+          <div class="pet-growth-box">
+            <pre class="pet-ascii-avatar" id="petAvatarPreview">
+  (..)  
+ /"*"\\ 
+  ~v~   
+            </pre>
+            <div style="flex: 1;">
+              <h3 style="font-size: 1.15rem; color: var(--neon-green);" id="petName">Solispark</h3>
+              <div style="font-size: 0.78rem; color: var(--text-dim);" id="petSpecies">Joy Hatchling (Tiny)</div>
+              <div style="font-size: 0.75rem; color: var(--neon-cyan); margin-top: 4px;" id="growthMilestoneText">
+                Stage 1 of 4 • Grows to Wisp at Level 3
+              </div>
+              <div class="growth-stage-indicator">
+                <div class="growth-dot active" title="Stage 1: Hatchling (Tiny)"></div>
+                <div class="growth-dot" title="Stage 2: Wisp (Medium)"></div>
+                <div class="growth-dot" title="Stage 3: Juvenile (Large)"></div>
+                <div class="growth-dot" title="Stage 4: Ascended (Giant)"></div>
+              </div>
             </div>
-            <button class="btn btn-primary" id="btnPetCompanion" style="padding: 6px 12px;">❤️ Pet Me</button>
+            <button class="btn btn-primary" id="btnPetCompanion" style="padding: 6px 10px; font-size: 0.75rem;">❤️ Pet</button>
           </div>
 
-          <div style="margin-bottom: 10px;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+          <div style="margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.78rem;">
               <span>Happiness:</span>
-              <strong id="petHpText">85%</strong>
+              <strong id="petHpText">80%</strong>
             </div>
             <div class="progress-bar-bg">
-              <div class="progress-bar-fill" id="petHpBar" style="width: 85%;"></div>
+              <div class="progress-bar-fill" id="petHpBar" style="width: 80%;"></div>
             </div>
           </div>
 
-          <div style="margin-bottom: 10px;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
-              <span>XP to Next Evolution:</span>
-              <strong id="petXpText">45 / 100 XP</strong>
+          <div style="margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.78rem;">
+              <span>XP to Next Growth:</span>
+              <strong id="petXpText">25 / 60 XP</strong>
             </div>
             <div class="progress-bar-bg">
-              <div class="progress-bar-fill" id="petXpBar" style="width: 45%; background: linear-gradient(90deg, #ffb703, #ff3366);"></div>
+              <div class="progress-bar-fill" id="petXpBar" style="width: 42%; background: linear-gradient(90deg, #ffb703, #ff3366);"></div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- 4. WELLNESS QUESTS / MICRO-STEPS (POINTS & WELLNESS) -->
+      <!-- 3. EMOTION POINTS VAULT (All Feelings Earn Points!) -->
       <section class="card">
         <div class="card-title">
-          <span>Wellness Micro-Steps (Get Points!)</span>
-          <span style="color: var(--neon-green);">+XP & Essence</span>
+          <span>Emotional Awareness Points</span>
+          <span style="color: var(--neon-cyan);" id="totalVoicePointsBadge">145 Total Pts</span>
+        </div>
+        <p style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 10px;">
+          Every emotion earns points! Negative emotions acknowledge awareness; positive remedies foster growth.
+        </p>
+        <div class="emotion-points-grid">
+          <div class="emotion-point-chip" id="chipJoy">
+            <span class="label">☀️ Joy</span>
+            <span class="pts" id="ptsJoy">35</span>
+          </div>
+          <div class="emotion-point-chip" id="chipCalm">
+            <span class="label">💧 Calm</span>
+            <span class="pts" id="ptsCalm">40</span>
+          </div>
+          <div class="emotion-point-chip" id="chipAnxiety">
+            <span class="label">🌪️ Anxiety</span>
+            <span class="pts" id="ptsAnxiety">20</span>
+          </div>
+          <div class="emotion-point-chip" id="chipSadness">
+            <span class="label">🌙 Gloom</span>
+            <span class="pts" id="ptsSadness">15</span>
+          </div>
+          <div class="emotion-point-chip" id="chipFrustration">
+            <span class="label">⚡ Tension</span>
+            <span class="pts" id="ptsFrustration">10</span>
+          </div>
+          <div class="emotion-point-chip" id="chipCurious">
+            <span class="label">✨ Focus</span>
+            <span class="pts" id="ptsCurious">25</span>
+          </div>
+        </div>
+
+        <div class="voice-metric">
+          <span style="color: var(--text-dim);">Live Pitch (F0):</span>
+          <strong id="metricPitch">165 Hz</strong>
+        </div>
+        <div class="voice-metric">
+          <span style="color: var(--text-dim);">Biometric Voice Isolation:</span>
+          <strong style="color: var(--neon-green);" id="metricIsolation">Wearer Only (94% match)</strong>
+        </div>
+      </section>
+
+      <!-- 4. REMEDY STEPS TO GROW HAPPY EMOTION -->
+      <section class="card span-2">
+        <div class="card-title">
+          <span>Micro-Remedies & Mood Transformation</span>
+          <span style="color: var(--neon-green);">Transform Mood $\rightarrow$ +Bonus XP</span>
         </div>
         <div id="questList">
-          <!-- Dynamic Quests will be rendered here -->
-        </div>
-      </section>
-
-      <!-- 5. BREEDING SANCTUARY & ESSENCE LAB -->
-      <section class="card">
-        <div class="card-title">
-          <span>Breeding Lab & Essence Vault</span>
-          <span style="color: var(--neon-cyan);">Fusion Sanctuary</span>
-        </div>
-        <div class="essence-vault">
-          <div class="essence-pill">☀️ Joy: <strong id="essJoy">40</strong></div>
-          <div class="essence-pill">💧 Calm: <strong id="essCalm">50</strong></div>
-          <div class="essence-pill">✨ Focus: <strong id="essCurious">25</strong></div>
-        </div>
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px; margin-bottom: 10px;">
-          <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 4px;">🧬 Hybrid Breeding: Serenidrake</div>
-          <div style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 8px;">
-            Combine Solispark (Joy) + Lumidrop (Calm) to hatch the Celestial Dragon of Serenity.
-          </div>
-          <button class="btn btn-primary" id="btnBreed" style="width: 100%;">🥚 Incubate & Hatch Hybrid</button>
+          <!-- Quests will be rendered dynamically -->
         </div>
       </section>
     </div>
@@ -423,9 +509,8 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
 
   const state = app.getStateManager()
   const petManager = app.getPetManager()
-  const voiceAnalyzer = app.getVoiceAnalyzer()
 
-  // Update HUD Mirror text
+  // Update HUD Mirror
   const updateMirror = () => {
     const s = state.get()
     const pet = s.activePet
@@ -452,23 +537,33 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
       const quests = s.activeQuests
       const active = quests.find((q) => !q.completed) || quests[0]
       mirrorEl.textContent = [
-        `┌── [ WELLNESS QUEST ] ───────────────────────── [ +${active ? active.rewardXp : 0} XP ] ──┐`,
+        `┌── [ WELLNESS REMEDY ] ──────────────────────── [ +${active ? active.rewardXp : 0} XP ] ──┐`,
         `│                                                       │`,
         `│  Target: ${active ? active.title.padEnd(43) : 'All Completed!'.padEnd(43)} │`,
-        `│  Action: ${active ? active.microStep.padEnd(43) : ''.padEnd(43)} │`,
+        `│  Remedy: ${active ? active.microStep.padEnd(43) : ''.padEnd(43)} │`,
         `│  Reward: +${active ? active.rewardEssence : 0} ${active ? active.targetEmotion.toUpperCase() : ''} Essence                             │`,
         `│                                                       │`,
-        `└────────────────────────────────── [TAP] Complete | [SWIPE] Pet ┘`,
+        `└────────────────────────────────── [TAP] Complete | [SWIPE] Goal ┘`,
+      ].join('\n')
+    } else if (screen === 'endgoal') {
+      const goal = petManager.getEndGoalStatus()
+      const pts = petManager.getEmotionPoints()
+      mirrorEl.textContent = [
+        `┌── [ ZENITH END GOAL ] ────────────────────────── [ RESILIENCE ] ──┐`,
+        `│  Rank: ${goal.currentAscensionRank.padEnd(47)}│`,
+        `│  Equilibrium: ${goal.equilibriumScore}% / 100%       Total Pts: ${pts.totalVoicePoints} Pts        │`,
+        `│  Joy: ${pts.joy} | Calm: ${pts.calm} | Anxiety: ${pts.anxiety} | Sad: ${pts.sadness} | Grit: ${pts.frustration}       │`,
+        `│                                                       │`,
+        `│  "Balance all 5 emotions to awaken the Zenith Guardian"│`,
+        `└────────────────────────────────────── [SWIPE] Pet HUD ┘`,
       ].join('\n')
     } else if (screen === 'breeding') {
       const pair = petManager.getBreedingPair()
-      const ess = petManager.getEssencePoints()
+      const pts = petManager.getEmotionPoints()
       mirrorEl.textContent = [
         `┌── [ BREEDING LAB ] ───────────────────────────── [ SANCTUARY ] ──┐`,
-        `│                                                       │`,
-        `│  Essence: Joy: ${ess.joy} | Calm: ${ess.calm} | Focus: ${ess.curiosity}                │`,
-        `│  ${pair ? `Incubating: ${pair.eggSpecies.toUpperCase()} (${pair.currentEssence}/${pair.hatchCostEssence} Essence)` : 'Select two pets to fuse into a legendary hybrid'}  │`,
-        `│                                                       │`,
+        `│  Joy: ${pts.joy} | Calm: ${pts.calm} | Focus: ${pts.curiosity}                          │`,
+        `│  ${pair ? `Incubating: ${pair.eggSpecies.toUpperCase()} (${pair.currentEssence}/${pair.hatchCostEssence} Essence)` : 'Incubate two emotional spirits into a hybrid'}   │`,
         `└────────────────────────────────────── [TAP] Hatch | [SWIPE] Pet ┘`,
       ].join('\n')
     }
@@ -485,15 +580,18 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
         (q) => `
         <div class="quest-item ${q.completed ? 'completed' : ''}" data-id="${q.id}">
           <div class="quest-info">
-            <h4>${q.title}</h4>
-            <p>${q.microStep}</p>
+            <h4 style="font-size: 0.95rem; margin-bottom: 3px;">${q.title}</h4>
+            <p style="font-size: 0.8rem; color: var(--text-dim);">${q.microStep}</p>
+            <span style="font-size: 0.72rem; color: var(--neon-cyan); margin-top: 3px; display: inline-block;">
+              Remedy for: <strong>${q.remedyFor.toUpperCase()}</strong> $\\rightarrow$ Boosts <strong>${q.targetEmotion.toUpperCase()}</strong>
+            </span>
           </div>
-          <div>
-            <div class="quest-reward">+${q.rewardXp} XP</div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.8rem; color: var(--neon-amber); font-weight: 600;">+${q.rewardXp} XP</div>
             ${
               !q.completed
                 ? `<button class="btn btn-primary btn-complete-quest" data-id="${q.id}" style="padding: 4px 8px; font-size: 0.75rem; margin-top: 4px;">Done</button>`
-                : '<span style="font-size: 0.75rem; color: #666;">Done ✓</span>'
+                : '<span style="font-size: 0.75rem; color: #666;">Completed ✓</span>'
             }
           </div>
         </div>
@@ -516,8 +614,20 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
   const updateUI = () => {
     const s = state.get()
     const pet = s.activePet
+    const pts = petManager.getEmotionPoints()
+    const goal = petManager.getEndGoalStatus()
 
-    // Pet stats
+    // 0. End Goal Hero update
+    const goalTitle = document.getElementById('goalTitle')
+    const eqText = document.getElementById('equilibriumPercentText')
+    const eqBar = document.getElementById('equilibriumBar')
+    const rankTag = document.getElementById('ascensionRankTag')
+    if (goalTitle) goalTitle.textContent = `🏆 ${goal.title}`
+    if (eqText) eqText.textContent = `${goal.equilibriumScore}% Equilibrium`
+    if (eqBar) eqBar.style.width = `${goal.equilibriumScore}%`
+    if (rankTag) rankTag.textContent = goal.currentAscensionRank
+
+    // 1. Pet Stats & Visible Growth
     const petNameEl = document.getElementById('petName')
     const petSpeciesEl = document.getElementById('petSpecies')
     const petLevelTag = document.getElementById('petLevelTag')
@@ -525,59 +635,89 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
     const petHpBar = document.getElementById('petHpBar')
     const petXpText = document.getElementById('petXpText')
     const petXpBar = document.getElementById('petXpBar')
+    const petAvatarPreview = document.getElementById('petAvatarPreview')
+    const growthMilestoneText = document.getElementById('growthMilestoneText')
 
     if (petNameEl) petNameEl.textContent = pet.name
-    if (petSpeciesEl) petSpeciesEl.textContent = `${pet.speciesName} (${pet.element.toUpperCase()})`
+    if (petSpeciesEl) petSpeciesEl.textContent = `${pet.speciesName} (${pet.stage.toUpperCase()})`
     if (petLevelTag) petLevelTag.textContent = `Lvl ${pet.level} ${pet.stage.toUpperCase()}`
     if (petHpText) petHpText.textContent = `${pet.happiness}%`
     if (petHpBar) petHpBar.style.width = `${pet.happiness}%`
     if (petXpText) petXpText.textContent = `${pet.xp} / ${pet.xpToNextLevel} XP`
     if (petXpBar) petXpBar.style.width = `${Math.min(100, Math.round((pet.xp / pet.xpToNextLevel) * 100))}%`
 
-    // Emotion & Prosody
-    const reading = s.lastReading
-    const emotionBadge = document.getElementById('currentEmotionBadge')
-    const coachTip = document.getElementById('coachTipText')
-    const metricPitch = document.getElementById('metricPitch')
-    const metricEnergy = document.getElementById('metricEnergy')
-    const metricIsolation = document.getElementById('metricIsolation')
-    const voiceMatchBadge = document.getElementById('voiceMatchBadge')
+    if (petAvatarPreview) {
+      petAvatarPreview.textContent = getPetAscii(pet.speciesId, pet.stage)
+      petAvatarPreview.style.transform = `scale(${pet.sizeScale})`
+    }
 
+    if (growthMilestoneText) {
+      if (pet.stage === 'hatchling') growthMilestoneText.textContent = 'Stage 1 of 4 • Grows to Wisp at Level 3'
+      else if (pet.stage === 'wisp') growthMilestoneText.textContent = 'Stage 2 of 4 • Grows to Juvenile Beast at Level 6'
+      else if (pet.stage === 'juvenile') growthMilestoneText.textContent = 'Stage 3 of 4 • Grows to Ascended Guardian at Level 10'
+      else growthMilestoneText.textContent = '★ Stage 4 of 4: MAX ASCENDED GUARDIAN! ★'
+    }
+
+    // Growth dots update
+    const dots = document.querySelectorAll('.growth-dot')
+    const stageIndex = ['hatchling', 'wisp', 'juvenile', 'ascended'].indexOf(pet.stage)
+    dots.forEach((dot, idx) => {
+      if (idx <= stageIndex) dot.classList.add('active')
+      else dot.classList.remove('active')
+    })
+
+    // 2. Emotion Points Vault
+    const ptsJoy = document.getElementById('ptsJoy')
+    const ptsCalm = document.getElementById('ptsCalm')
+    const ptsAnxiety = document.getElementById('ptsAnxiety')
+    const ptsSadness = document.getElementById('ptsSadness')
+    const ptsFrustration = document.getElementById('ptsFrustration')
+    const ptsCurious = document.getElementById('ptsCurious')
+    const totalVoicePointsBadge = document.getElementById('totalVoicePointsBadge')
+
+    if (ptsJoy) ptsJoy.textContent = String(pts.joy)
+    if (ptsCalm) ptsCalm.textContent = String(pts.calm)
+    if (ptsAnxiety) ptsAnxiety.textContent = String(pts.anxiety)
+    if (ptsSadness) ptsSadness.textContent = String(pts.sadness)
+    if (ptsFrustration) ptsFrustration.textContent = String(pts.frustration)
+    if (ptsCurious) ptsCurious.textContent = String(pts.curiosity)
+    if (totalVoicePointsBadge) totalVoicePointsBadge.textContent = `${pts.totalVoicePoints} Total Pts`
+
+    // Active chip highlight
+    const chips: Record<string, HTMLElement | null> = {
+      joy: document.getElementById('chipJoy'),
+      calm: document.getElementById('chipCalm'),
+      anxiety: document.getElementById('chipAnxiety'),
+      sadness: document.getElementById('chipSadness'),
+      frustration: document.getElementById('chipFrustration'),
+      curiosity: document.getElementById('chipCurious'),
+    }
+    Object.entries(chips).forEach(([emo, el]) => {
+      if (el) {
+        if (emo === pet.dominantMood) el.classList.add('active')
+        else el.classList.remove('active')
+      }
+    })
+
+    // 3. Biometric Prosody & Isolation
+    const reading = s.lastReading
+    const metricPitch = document.getElementById('metricPitch')
+    const metricIsolation = document.getElementById('metricIsolation')
     if (reading) {
-      if (emotionBadge) emotionBadge.textContent = `${getEmotionEmoji(reading.primary)} (${Math.round(reading.confidence * 100)}%)`
       if (metricPitch) metricPitch.textContent = `${reading.pitchHz} Hz`
-      if (metricEnergy) metricEnergy.textContent = `${reading.energyRms}`
       if (metricIsolation) {
         metricIsolation.textContent = reading.isUserVoice
           ? `Wearer Verified (${Math.round(reading.userVoiceConfidence * 100)}%)`
-          : 'Ambient Voice Ignored'
+          : 'Ambient Speaker Ignored'
         metricIsolation.style.color = reading.isUserVoice ? 'var(--neon-green)' : 'var(--text-dim)'
       }
     }
-
-    if (coachTip) coachTip.textContent = `"${s.coachMessage}"`
-
-    const fp = voiceAnalyzer.getFingerprint()
-    if (voiceMatchBadge) {
-      voiceMatchBadge.textContent = fp.isEnrolled
-        ? `Fingerprint: Enrolled (${fp.medianPitchHz} Hz)`
-        : 'Fingerprint: Calibrating...'
-    }
-
-    // Essence
-    const ess = petManager.getEssencePoints()
-    const essJoy = document.getElementById('essJoy')
-    const essCalm = document.getElementById('essCalm')
-    const essCurious = document.getElementById('essCurious')
-    if (essJoy) essJoy.textContent = String(ess.joy)
-    if (essCalm) essCalm.textContent = String(ess.calm)
-    if (essCurious) essCurious.textContent = String(ess.curiosity)
 
     renderQuests()
     updateMirror()
   }
 
-  // Wire simulator & glasses push buttons
+  // Button Listeners
   document.getElementById('btnConnectGlasses')?.addEventListener('click', async () => {
     const btn = document.getElementById('btnConnectGlasses') as HTMLButtonElement | null
     if (btn) btn.textContent = '⏳ Connecting...'
@@ -607,7 +747,7 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
   })
 
   document.getElementById('btnSimSwipeFwd')?.addEventListener('click', async () => {
-    const screens = ['pet', 'quest', 'breeding'] as const
+    const screens = ['pet', 'quest', 'endgoal', 'breeding'] as const
     const cur = state.get().currentScreen
     const next = screens[(screens.indexOf(cur as any) + 1) % screens.length]
     state.update({ currentScreen: next })
@@ -616,7 +756,7 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
   })
 
   document.getElementById('btnSimSwipeBack')?.addEventListener('click', async () => {
-    const screens = ['pet', 'quest', 'breeding'] as const
+    const screens = ['pet', 'quest', 'endgoal', 'breeding'] as const
     const cur = state.get().currentScreen
     const prev = screens[(screens.indexOf(cur as any) - 1 + screens.length) % screens.length]
     state.update({ currentScreen: prev })
@@ -634,16 +774,6 @@ export function renderCompanionDashboard(app: AuraPetApp): void {
     active.happiness = Math.min(100, active.happiness + 10)
     state.update({ activePet: active, coachMessage: `You showed love to ${active.name}! 💕` })
     updateUI()
-  })
-
-  document.getElementById('btnBreed')?.addEventListener('click', () => {
-    const all = petManager.getAllPets()
-    if (all.length >= 2) {
-      petManager.startBreeding(all[0].id, all[1].id)
-      petManager.hatchEgg()
-      state.update({ coachMessage: 'Hatched a new Serenidrake dragon! 🐲✨' })
-      updateUI()
-    }
   })
 
   // Listen to state changes

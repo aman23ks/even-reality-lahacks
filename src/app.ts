@@ -134,9 +134,9 @@ export class AuraPetApp {
       }
     })
 
-    // 2. Swipe Forward -> Cycle screens (Pet -> Quest -> Breeding)
+    // 2. Swipe Forward -> Cycle screens (Pet -> Quest -> Breeding -> EndGoal)
     this.events.on('swipe_forward', async () => {
-      const screens: ActiveHudScreen[] = ['pet', 'quest', 'breeding']
+      const screens: ActiveHudScreen[] = ['pet', 'quest', 'breeding', 'endgoal']
       const current = this.state.get().currentScreen
       const idx = screens.indexOf(current)
       const next = screens[(idx + 1) % screens.length]
@@ -146,7 +146,7 @@ export class AuraPetApp {
 
     // 3. Swipe Backward -> Cycle screens backwards
     this.events.on('swipe_backward', async () => {
-      const screens: ActiveHudScreen[] = ['pet', 'quest', 'breeding']
+      const screens: ActiveHudScreen[] = ['pet', 'quest', 'breeding', 'endgoal']
       const current = this.state.get().currentScreen
       const idx = screens.indexOf(current)
       const prev = screens[(idx - 1 + screens.length) % screens.length]
@@ -182,14 +182,22 @@ export class AuraPetApp {
       if (!reading.isUserVoice) return
 
       // Apply to Pet Manager
-      const { leveledUp } = this.petManager.applyVoiceEmotion(reading)
+      const { leveledUp, remedySuggested } = this.petManager.applyVoiceEmotion(reading)
       const pet = this.petManager.getActivePet()
+      const emotionPoints = this.petManager.getEmotionPoints()
+      const endGoal = this.petManager.getEndGoalStatus()
 
       let coachMsg = this.state.get().coachMessage
       const now = Date.now()
 
-      // If mood changed or 12 seconds elapsed, query AI coach / tips
-      if (now - lastMoodChange > 12000) {
+      // If heavy mood detected, immediately suggest the remedy
+      if (remedySuggested) {
+        const quests = this.petManager.getActiveQuests()
+        const activeRemedy = quests.find((q) => !q.completed)
+        if (activeRemedy) {
+          coachMsg = `Remedy: ${activeRemedy.microStep.slice(0, 52)}`
+        }
+      } else if (now - lastMoodChange > 12000) {
         lastMoodChange = now
         try {
           const res = await this.api.getCoachSuggestion(reading.primary, pet.name, pet.level)
@@ -202,7 +210,7 @@ export class AuraPetApp {
       }
 
       if (leveledUp) {
-        coachMsg = `★ EVOLUTION! ${pet.name} is now Lvl ${pet.level}! ★`
+        coachMsg = `★ EVOLUTION! ${pet.name} GREW to Lvl ${pet.level} ${pet.stage.toUpperCase()}! ★`
       }
 
       this.state.update({
@@ -210,6 +218,8 @@ export class AuraPetApp {
         lastReading: reading,
         coachMessage: coachMsg,
         activeQuests: this.petManager.getActiveQuests(),
+        emotionPoints,
+        endGoal,
       })
 
       // Throttle G2 HUD re-renders to at most once per 1.5s
@@ -332,7 +342,7 @@ export class AuraPetApp {
 
       case 'breeding': {
         const pair = this.petManager.getBreedingPair()
-        const essence = this.petManager.getEssencePoints()
+        const essence = this.petManager.getEmotionPoints()
 
         const header = '[BREEDING SANCTUARY & ESSENCE]'
         const content = pair
@@ -354,6 +364,26 @@ export class AuraPetApp {
             ].join('\n')
 
         await this.display.renderBreedingHud(header, content)
+        break
+      }
+
+      case 'endgoal': {
+        const goal = this.petManager.getEndGoalStatus()
+        const pts = this.petManager.getEmotionPoints()
+        const title = '[END GOAL: ZENITH AWAKENING]'
+        const body = [
+          `Rank: ${goal.currentAscensionRank.toUpperCase()}`,
+          `Equilibrium: ${goal.equilibriumScore}% / 100%`,
+          `Voice Points: ${pts.totalVoicePoints} total`,
+          '---------------------------------------',
+          `☀️ Joy: ${pts.joy} | 💧 Calm: ${pts.calm} | ✨ Focus: ${pts.curiosity}`,
+          `🌪️ Anxiety: ${pts.anxiety} | 🌙 Gloom: ${pts.sadness} | ⚡ Grit: ${pts.frustration}`,
+          '---------------------------------------',
+          goal.isAwakened ? '★ ZENITH GUARDIAN AWAKENED! ★' : 'Balance all 5 emotions to awaken Zenith!',
+          '>> [SWIPE] Pet HUD',
+        ].join('\n')
+
+        await this.display.renderQuestHud(title, body)
         break
       }
 

@@ -2,7 +2,7 @@
  * src/state.ts — AuraPet State Manager
  */
 
-import type { Pet, EmotionReading, WellnessQuest, ActiveHudScreen } from './types/pet'
+import type { Pet, EmotionReading, WellnessQuest, ActiveHudScreen, EmotionPointsRecord, EndGoalStatus } from './types/pet'
 
 export interface AppState {
   currentScreen: ActiveHudScreen
@@ -14,6 +14,8 @@ export interface AppState {
   calibrationProgress: number
   voiceEnrolled: boolean
   activeQuests: WellnessQuest[]
+  emotionPoints: EmotionPointsRecord
+  endGoal: EndGoalStatus
   coachMessage: string
   backendOnline: boolean
   lastHudSync: number
@@ -30,16 +32,17 @@ export class StateManager {
         id: 'pet_starter_1',
         name: 'Solispark',
         speciesId: 'solispark',
-        speciesName: 'Joy Wisp',
+        speciesName: 'Joy Hatchling',
         element: 'joy',
-        stage: 'wisp',
-        level: 2,
-        xp: 45,
-        xpToNextLevel: 100,
-        happiness: 85,
-        hunger: 30,
+        stage: 'hatchling',
+        level: 1,
+        xp: 25,
+        xpToNextLevel: 60,
+        happiness: 80,
+        hunger: 20,
         dominantMood: 'joy',
         generation: 1,
+        sizeScale: 1.0,
         unlockedAt: Date.now(),
       },
       allPets: [],
@@ -48,6 +51,24 @@ export class StateManager {
       calibrationProgress: 0,
       voiceEnrolled: false,
       activeQuests: [],
+      emotionPoints: {
+        joy: 35,
+        calm: 40,
+        anxiety: 20,
+        sadness: 15,
+        frustration: 10,
+        curiosity: 25,
+        totalVoicePoints: 145,
+      },
+      endGoal: {
+        title: 'Awaken the Zenith Harmony Guardian',
+        description: 'Master all 5 emotional energies and evolve your pet into its giant Celestial Form.',
+        equilibriumScore: 25,
+        masteryPointsRequired: 300,
+        totalPointsEarned: 145,
+        isAwakened: false,
+        currentAscensionRank: 'Novice Seeker (Sprout)',
+      },
       coachMessage: 'Speak naturally to bond with your pet...',
       backendOnline: false,
       lastHudSync: Date.now(),

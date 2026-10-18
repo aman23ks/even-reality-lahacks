@@ -22,7 +22,8 @@ export interface EmotionReading {
   userVoiceConfidence: number
 }
 
-export type PetStage = 'egg' | 'wisp' | 'juvenile' | 'ascended'
+// 4 distinct physical growth stages from small to giant
+export type PetStage = 'hatchling' | 'wisp' | 'juvenile' | 'ascended'
 
 export interface PetSpecies {
   id: string
@@ -43,17 +44,29 @@ export interface Pet {
   xp: number
   xpToNextLevel: number
   happiness: number // 0 to 100
-  hunger: number // 0 to 100 (needs wellness actions)
+  hunger: number // 0 to 100
   dominantMood: EmotionType
   generation: number
+  sizeScale: number // 1.0 (small) to 3.0 (giant ascended)
   parents?: [string, string]
   unlockedAt: number
+}
+
+export interface EmotionPointsRecord {
+  joy: number
+  calm: number
+  anxiety: number
+  sadness: number
+  frustration: number
+  curiosity: number
+  totalVoicePoints: number
 }
 
 export interface WellnessQuest {
   id: string
   title: string
   microStep: string
+  remedyFor: EmotionType
   targetEmotion: EmotionType
   rewardXp: number
   rewardEssence: number
@@ -79,4 +92,14 @@ export interface VoiceFingerprint {
   sampleCount: number
 }
 
-export type ActiveHudScreen = 'pet' | 'quest' | 'breeding' | 'calibrate'
+export interface EndGoalStatus {
+  title: string
+  description: string
+  equilibriumScore: number // 0 to 100%
+  masteryPointsRequired: number
+  totalPointsEarned: number
+  isAwakened: boolean
+  currentAscensionRank: string
+}
+
+export type ActiveHudScreen = 'pet' | 'quest' | 'breeding' | 'calibrate' | 'endgoal'

@@ -1,193 +1,234 @@
 /**
- * src/game/petAscii.ts — Crisp ASCII art tuned for the G2's 576x288 Green Monochromatic Display
+ * src/game/petAscii.ts — Physical Creature Growth ASCII Art tuned for G2 (576x288 Mono Display)
+ * 
+ * Each pet visibly GROWS from Tiny Hatchling -> Medium Wisp -> Large Beast -> Giant Ascended Guardian
  */
 
 import type { EmotionType, PetStage } from '../types/pet'
 
 export interface PetArtSet {
-  egg: string
-  wisp: string
-  juvenile: string
-  ascended: string
+  hatchling: string // Tiny (Lvl 1-2)
+  wisp: string      // Medium (Lvl 3-5)
+  juvenile: string  // Large (Lvl 6-9)
+  ascended: string  // Giant Guardian (Lvl 10+)
 }
 
 export const PET_ASCII_LIBRARY: Record<string, PetArtSet> = {
   // Joy / Fire Creature: Solispark
   solispark: {
-    egg: [
-      '    .---.    ',
-      '   /  *  \\   ',
-      '  | * (:) |  ',
-      '   \\  *  /   ',
-      '    \'---\'    ',
+    hatchling: [
+      '  (..)  ',
+      ' /"*"\\ ',
+      '  ~v~   ',
+      ' (Tiny) ',
     ].join('\n'),
+
     wisp: [
-      '    (   )    ',
-      '   ( ^o^ )   ',
-      '    (   )    ',
-      '     ~v~     ',
+      '   .-.   ',
+      '  (^o^)  ',
+      ' /| * |\\ ',
+      '  ~\" \"~  ',
+      ' (Wisp)  ',
     ].join('\n'),
+
     juvenile: [
-      '    \\ | /    ',
-      '   (\\_-_/)   ',
-      '  =( ^w^ )=  ',
-      '   c(\")(\")   ',
+      '   \\ | /   ',
+      '  (\\_-_/)  ',
+      ' =( ^w^ )= ',
+      '  /| * |\\  ',
+      '  c(\")(\")  ',
+      ' (Beast)   ',
     ].join('\n'),
+
     ascended: [
-      '  *  \\|/  *  ',
-      ' /\\ (\\_/) /\\ ',
-      '(  =(^O^)=  )',
-      ' \\/ c(\")(\") \\/ ',
-      '   *~ SOL ~* ',
+      '  *~.  \\|/  .~*  ',
+      ' / \\ \\(\\_/) / /\\ ',
+      '(   =(^O^)=   )  ',
+      ' \\ \\_/c(\")\\_/ /  ',
+      '  \'--\'\"\"\"\"\'--\'   ',
+      ' *~ ZENITH SOL ~* ',
     ].join('\n'),
   },
 
-  // Calm / Water Creature: Lumidrop / Zenpaca
+  // Calm / Water Spirit: Lumidrop
   lumidrop: {
-    egg: [
-      '    .---.    ',
-      '   / ~~~ \\   ',
-      '  | ( o ) |  ',
-      '   \\ ~~~ /   ',
-      '    \'---\'    ',
+    hatchling: [
+      '  (..)  ',
+      ' /~~~\\ ',
+      '  \" \"   ',
+      ' (Tiny) ',
     ].join('\n'),
+
     wisp: [
-      '    .---.    ',
-      '   ( -_- )   ',
-      '    \\_v_/    ',
-      '     ~ ~     ',
+      '   .---.   ',
+      '  ( -_- )  ',
+      ' /(  ~  )\\ ',
+      '   \"\" \"\"   ',
+      '  (Wisp)   ',
     ].join('\n'),
+
     juvenile: [
-      '    .---.    ',
-      '   ( =.= )   ',
-      '  /(  ~  )\\  ',
-      '    \"\" \"\"    ',
+      '   ~ .---. ~   ',
+      '  ( ( ˘◡˘ ) )  ',
+      ' ~/(  ~~~  )\\~ ',
+      '   /\"\"   \"\"\\   ',
+      '   (Juvenile)  ',
     ].join('\n'),
+
     ascended: [
-      '   ~ .---. ~ ',
-      '  ( ( ˘◡˘ ) )',
-      ' ~/(  ~~~  )\\~',
-      '    ~ \"\" ~   ',
+      '  ~*~  .---.  ~*~  ',
+      ' ( ( ( ☯◡☯ ) ) )  ',
+      '~/(   ~~~~~   )\\~ ',
+      '(  ( (  ~  ) )  ) ',
+      ' ~*~  \"\" \"\"  ~*~  ',
+      '  * ZENITH CALM *  ',
     ].join('\n'),
   },
 
-  // Anxiety / Wind Sprite: Zephyr / Wobble
+  // Anxiety / Wind Sprite: Zephyr (Transforms panic into lightning agility!)
   zephyr: {
-    egg: [
-      '    .---.    ',
-      '   / ?.? \\   ',
-      '  | ( ! ) |  ',
-      '   \\     /   ',
-      '    \'---\'    ',
+    hatchling: [
+      '  (??)  ',
+      '  /\"\\   ',
+      '  ~ ~   ',
+      ' (Tiny) ',
     ].join('\n'),
+
     wisp: [
-      '     ~~~     ',
-      '   ( •_• )?  ',
-      '    ~\\_/~    ',
-      '    ~   ~    ',
+      '   ~.~   ',
+      '  (•_•)? ',
+      ' <( ~ )> ',
+      '  ~ / \\~ ',
+      ' (Wisp)  ',
     ].join('\n'),
+
     juvenile: [
-      '   ~ (o_o) ~ ',
-      '  <((  ~  ))> ',
-      '   ~ / \\ ~   ',
+      '  ~~ (o_o) ~~  ',
+      ' <<((  ~  ))>> ',
+      '   /| * |\\     ',
+      '  ~= / \\ =~    ',
+      '  (Zephyr)     ',
     ].join('\n'),
+
     ascended: [
-      '  ~= (OvO) =~ ',
-      ' <<((  ★  ))>>',
-      '  ~= / \\ =~  ',
+      '  ==~  /\\ /\\  ~==  ',
+      ' <<( ( OvO ) )>>  ',
+      '<<<<(  ★⚡★  )>>>> ',
+      '  <=( (   ) )=>   ',
+      '  ==~  / \\  ~==   ',
+      '  * STORM GUARDIAN *',
     ].join('\n'),
   },
 
-  // Sadness / Shadow Creature: Gloomwing / Umbra
+  // Melancholy / Shadow Creature: Gloomwing (Transforms sadness into profound depth!)
   gloomwing: {
-    egg: [
-      '    .---.    ',
-      '   /  :  \\   ',
-      '  | ( . ) |  ',
-      '   \\  \'  /   ',
-      '    \'---\'    ',
+    hatchling: [
+      '  (..)  ',
+      '  /...\\ ',
+      '   ...  ',
+      ' (Tiny) ',
     ].join('\n'),
+
     wisp: [
-      '     ...     ',
-      '   ( ;_; )   ',
-      '    (   )    ',
-      '     ...     ',
+      '   /| |\\   ',
+      '  ( ;_; )  ',
+      '  /(   )\\  ',
+      '   \"\" \"\"   ',
+      '  (Wisp)   ',
     ].join('\n'),
+
     juvenile: [
-      '   /|   |\\   ',
-      '  / (u_u) \\  ',
-      '    (   )    ',
-      '     \" \"     ',
-    ].join('\n'),
-    ascended: [
-      '  /\\ (U_U) /\\ ',
+      '   /\\   /\\   ',
+      '  /  (u_u)  \\ ',
       ' <  (  ✦  )  >',
-      '  \\/ c(\")  \\/ ',
-      '   * NIGHT * ',
+      '  \\ c(\")(\") / ',
+      '   (Gloomwing)',
+    ].join('\n'),
+
+    ascended: [
+      '  /\\/\\ (U_U) /\\/\\  ',
+      ' <    (  ✦✦ )    > ',
+      '<<   /(  ★  )\\   >>',
+      ' <    c(\")(\")    > ',
+      '  \\/\\/ NIGHT \\/\\/  ',
+      '  * ABYSS GUARDIAN *',
     ].join('\n'),
   },
 
-  // Frustration / Fire-Spike: Pyre
+  // Frustration / Fire-Spike: Pyre (Transforms anger into unstoppable drive!)
   pyre: {
-    egg: [
-      '    ./\\/\\.   ',
-      '   /  #  \\   ',
-      '  | ( > ) |  ',
-      '   \\  #  /   ',
-      '    \'---\'    ',
+    hatchling: [
+      '  (><)  ',
+      '  /##\\  ',
+      '  vvv   ',
+      ' (Tiny) ',
     ].join('\n'),
+
     wisp: [
-      '    /\\ /\\    ',
-      '   ( >_< )   ',
-      '    (   )    ',
-      '     vvv     ',
+      '   /\\ /\\   ',
+      '  ( >_< )  ',
+      '  <( # )>  ',
+      '   c(\")(\") ',
+      '  (Wisp)   ',
     ].join('\n'),
+
     juvenile: [
-      '   //\\ /\\\\   ',
-      '  < ( >_< ) >',
+      '   /// \\\\\\   ',
+      '  <( >_< )>  ',
+      '  <=( # )=>  ',
       '   c(\")(\")   ',
+      '   (Pyre Lvl)',
     ].join('\n'),
+
     ascended: [
-      '  * /// \\\\\\ * ',
-      ' < ( >=< ) > ',
-      '  < c(\")(\") > ',
-      '   ! PYRE !  ',
+      ' *!*  /// \\\\\\  *!* ',
+      '<<<=( ( >=< ) )=>>>',
+      ' <<  /(  ⚡🔥 )\\  >> ',
+      '  <   c(\")(\")   >  ',
+      '  * PYRE ASCENDED * ',
     ].join('\n'),
   },
 
-  // Hybrid Legendary: Serenidrake (Joy + Calm)
+  // Legendary Hybrid: Serenidrake (Joy + Calm)
   serenidrake: {
-    egg: [
-      '    .---.    ',
-      '   / ★ ✦ \\   ',
-      '  | ( ☯ ) |  ',
-      '   \\ ✦ ★ /   ',
-      '    \'---\'    ',
+    hatchling: [
+      '  (☯☯)  ',
+      '  /★\\   ',
+      '  ~ ~   ',
+      ' (Hatch) ',
     ].join('\n'),
+
     wisp: [
-      '    *---*    ',
-      '   ( ◕‿◕ )   ',
-      '    ~\\_/~    ',
-      '   ✦  ✦  ✦   ',
+      '   *---*   ',
+      '  ( ◕‿◕ )  ',
+      '  <=(☯)=>  ',
+      '   ✦   ✦   ',
+      '  (Drake)  ',
     ].join('\n'),
+
     juvenile: [
-      '   /\\  _  /\\ ',
-      '  ( (◕ ‿ ◕) )',
-      '  <=(  ☯  )=>',
-      '    /\"   \"\\  ',
+      '   /\\  _  /\\   ',
+      '  ( (◕ ‿ ◕) )  ',
+      ' <=(  ☯★☯  )=> ',
+      '  /(       )\\  ',
+      '    /\"   \"\\    ',
+      '  (Dragon Beast)',
     ].join('\n'),
+
     ascended: [
-      ' ✦ /\\   /\\ ✦ ',
-      '<=( (★‿★) )=>',
-      '  /(  ☯☯  )\\ ',
-      '   ~ SERENI ~ ',
+      ' ✦ /\\   /\\   /\\ ✦ ',
+      '<=( (★ ‿ ★) )=>',
+      ' <<(   ☯★☯   )>> ',
+      '<<<( (  🐉  ) )>>>',
+      '  /(  ~~~~~  )\\  ',
+      ' * ZENITH DRAGON * ',
     ].join('\n'),
   },
 }
 
 export function getPetAscii(speciesId: string, stage: PetStage): string {
   const library = PET_ASCII_LIBRARY[speciesId.toLowerCase()] || PET_ASCII_LIBRARY.solispark
-  return library[stage] || library.juvenile
+  return library[stage] || library.hatchling
 }
 
 export function getEmotionEmoji(emotion: EmotionType): string {
