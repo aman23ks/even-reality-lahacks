@@ -6,7 +6,7 @@
  * Plus: "slow down" pace whisper, crisis safety screen, hatching, and the lens view for every phase.
  */
 
-import { DEMO_TIMINGS, NORMAL_TIMINGS, type Timings } from '../config'
+import { DEMO_TIMINGS, JUDGE_TIMINGS, NORMAL_TIMINGS, type Timings } from '../config'
 import type { Glasses } from '../platform/glasses'
 import type { Segmenter, Utterance } from '../audio/segmenter'
 import { wavBase64 } from '../audio/segmenter'
@@ -17,11 +17,11 @@ import { api } from '../api'
 import type { InputType, MoodLabel, ResetId, StageId, UtteranceResult, Weather } from '../types'
 import { MoodEngine, type MoodSnapshot } from './mood'
 import { BREATH, LOOK_UP, RESETS, pickReset } from './resets'
-import { Store, median, nextStage, stageFor, stageLabel } from './store'
+import { Store, median, nextStage, stageFor, stageLabel, useJudgeStages } from './store'
 import type { HeadTracker } from './imu'
 import { diag, diagEvent } from '../diagnostics'
 
-export type Phase = 'hatching' | 'idle' | 'nudged' | 'active' | 'bloom' | 'cleared' | 'evolving' | 'crisis' | 'voicecheck'
+export type Phase = 'hatching' | 'idle' | 'nudged' | 'active' | 'bloom' | 'cleared' | 'evolving' | 'crisis' | 'voicecheck' | 'intro'
 
 interface ActiveReset {
   id: ResetId
@@ -98,6 +98,7 @@ export class Aura {
   ) {
     this.mood = new MoodEngine(() => this.timings())
     this.phase = store.data.pet.hatched ? 'idle' : 'hatching'
+    if (store.data.judgeMode && !store.data.pet.hatched) setTimeout(() => this.startJudgeDemo(), 0)
     this.applyVoiceThreshold()
 
     glasses.onInput((t) => this.onInput(t))
@@ -111,7 +112,45 @@ export class Aura {
   }
 
   timings(): Timings {
+    if (this.store.data.judgeMode) return JUDGE_TIMINGS
     return this.store.data.demoMode ? DEMO_TIMINGS : NORMAL_TIMINGS
+  }
+
+  get judgeMode(): boolean {
+    return this.store.data.judgeMode
+  }
+
+  /**
+   * Judge mode: a fresh, guided 2-minute run. Mochi starts as a Sprout and reaches Zenith after three
+   * real bounce-backs (vent → nudge → spoken reset → say something calm), prompted on the lens.
+   */
+  startJudgeDemo(): void {
+    const d = this.store.data
+    d.judgeMode = true
+    d.pet.hatched = true
+    d.onboarded = true
+    d.pet.recoveries = 0
+    d.recoveries = []
+    useJudgeStages(true)
+    this.mood = new MoodEngine(() => this.timings())
+    this.pending = null
+    this.active = null
+    this.watch = null
+    this.celebrate = null
+    this.lastResetEndedAt = 0
+    this.whisperUntil = 0
+    this.store.save()
+    this.setPhase('intro', 6000)
+    diagEvent('judge_demo_start')
+    this.changed()
+  }
+
+  stopJudgeDemo(): void {
+    this.store.data.judgeMode = false
+    useJudgeStages(false)
+    this.store.save()
+    this.toIdle()
+    this.changed()
   }
 
   onChange(fn: (s: AuraSnapshot) => void): void {
@@ -295,6 +334,10 @@ export class Aura {
           this.startVoiceCheck()
           break
         }
+        if (t === 'double_tap' && this.judgeMode) {
+          if (stageFor(this.store.data.pet.recoveries, true) === 'zenith') this.startJudgeDemo()
+          break
+        }
         if (t === 'double_tap') {
           if (now < this.cardUntil) this.cardUntil = 0
           else this.glasses.exitDialog()
@@ -315,6 +358,7 @@ export class Aura {
       case 'bloom':
       case 'cleared':
       case 'evolving':
+      case 'intro':
         if (t === 'tap' || t === 'double_tap') this.toIdle()
         break
       case 'crisis':
@@ -444,10 +488,10 @@ export class Aura {
       }
     }
 
-    // Pending spike that resolved on its own
-    if (this.pending && this.mood.isRecovered(now)) {
+    // A waiting reset whose storm passed on its own goes away, but never while the nudge is on the
+    // lens (someone may be reading it) and never in judge mode (the guided run waits for the tap)
+    if (this.pending && this.phase !== 'nudged' && !this.judgeMode && this.mood.isRecovered(now)) {
       this.pending = null
-      if (this.phase === 'nudged') this.toIdle()
     }
 
     // New spike → nudge
@@ -482,6 +526,8 @@ export class Aura {
     d.resetStats[w.resetId].recovered++
     d.recoveries.push({ spikeAt: w.spikeAt, recoveredAt: now, resetId: w.resetId, bounceBackMs: bounceMs })
     this.watch = null
+    // Judge mode: each round starts under a clear sky, so the next vent isn't diluted by this calm-down
+    if (d.judgeMode) this.mood = new MoodEngine(() => this.timings())
     this.store.save()
     const evolved = stageFor(d.pet.recoveries, true) !== before
     this.celebrate = { kind: evolved ? 'evolving' : 'cleared', bounceMs }
@@ -490,7 +536,12 @@ export class Aura {
 
   private startReset(kind: 'storm' | 'fog', exclude: ResetId[] = []): void {
     const now = Date.now()
-    const id = pickReset(kind, this.store.data.resetStats, { imuAvailable: this.head.available, exclude })
+    // Judge mode keeps to the quick spoken resets (no 30s breathing, no sensor calibration)
+    const judgeSkip: ResetId[] = this.judgeMode ? ['breathe', 'look_up'] : []
+    const id = pickReset(kind, this.store.data.resetStats, {
+      imuAvailable: this.head.available,
+      exclude: [...exclude, ...judgeSkip],
+    })
     this.store.data.resetStats[id].offered++
     this.store.save()
     if (RESETS[id].verify === 'imu') this.head.setBaseline()
@@ -515,7 +566,10 @@ export class Aura {
     if (!a) return
     const tried = a.tried
     const remaining = (Object.keys(RESETS) as ResetId[]).filter(
-      (id) => !tried.includes(id) && RESETS[id].fits.includes(a.kind),
+      (id) =>
+        !tried.includes(id) &&
+        RESETS[id].fits.includes(a.kind) &&
+        !(this.judgeMode && (id === 'breathe' || id === 'look_up')),
     )
     this.startReset(a.kind, remaining.length ? tried : [a.id])
   }
@@ -580,7 +634,7 @@ export class Aura {
     if (this.phaseUntil && now > this.phaseUntil) {
       this.phaseUntil = 0
       if (this.phase === 'voicecheck') this.applyVoiceThreshold()
-      if (this.phase === 'bloom' || this.phase === 'cleared' || this.phase === 'evolving' || this.phase === 'voicecheck') this.toIdle()
+      if (['bloom', 'cleared', 'evolving', 'voicecheck', 'intro'].includes(this.phase)) this.toIdle()
     }
     if (this.phase === 'nudged' && now - this.nudgeShownAt > this.timings().nudgeVisibleMs) {
       this.setPhase('idle') // still pending: tap from ambient starts it
@@ -686,10 +740,17 @@ export class Aura {
         const caption = hatchOnly
           ? `${pet.name} hatched!\nIt grows every time you bounce back from stress.`
           : stage === 'zenith'
-            ? `ZENITH. ${pet.name} is fully grown.\n${zenithLine(d.recoveries.map((r) => r.bounceBackMs))}`
+            ? d.judgeMode
+              ? `ZENITH! ${pet.name} is fully grown.\nYou bounced back ${pet.recoveries} times.`
+              : `ZENITH. ${pet.name} is fully grown.\n${zenithLine(d.recoveries.map((r) => r.bounceBackMs))}`
             : `${pet.name} evolved into a ${stageLabel(stage).toUpperCase()}!\n${pet.recoveries} recoveries. ${toNext}.`
         return wideFrame(base({ face: 'happy', weather: 'none', effect: 'evolve', frame: Math.floor(this.frame / 2) }), caption)
       }
+      case 'intro':
+        return wideFrame(
+          base({ face: 'happy', weather: 'none', effect: 'bloom', frame: Math.floor(this.frame / 2) }),
+          "Hi, I'm Mochi.\nI help you bounce back from stress. Let's grow me to Zenith.",
+        )
       case 'voicecheck': {
         const i = Math.min(this.voiceStep, VOICE_LINES.length - 1)
         return cardFrame(
@@ -704,6 +765,7 @@ export class Aura {
         )
       case 'idle':
       default: {
+        if (d.judgeMode) return this.judgeView(base, stage, snap.weather)
         if (now < this.cardUntil) {
           const body = `${pet.name}  -  ${stageLabel(stage)}\nSky: ${snap.weather}\n\nRecoveries: ${pet.recoveries}\n${toNext}`
           return cardFrame(base(), body, this.pending ? 'tap: start a reset' : 'tap: close')
@@ -724,6 +786,37 @@ export class Aura {
         return ambientFrame(base(), line, whisper || Boolean(this.pending))
       }
     }
+  }
+
+  /** Judge mode idle screen: always tells the wearer exactly what to say next */
+  private judgeView(
+    base: (o?: Partial<Omit<SpriteSpec, 'w' | 'h'>>) => Omit<SpriteSpec, 'w' | 'h'>,
+    stage: StageId,
+    weather: Weather,
+  ): HudFrame {
+    const n = this.store.data.pet.recoveries
+    const left = Math.max(0, 3 - n)
+    if (stage === 'zenith') {
+      return cardFrame(
+        base({ face: 'happy', weather: 'none', glow: true }),
+        "That's AuraPet.\n\nIt helps you bounce back\nfrom stressful moments.",
+        '2x tap: try again',
+      )
+    }
+    const hint = `${stageLabel(stage)} · ${left} bounce-back${left === 1 ? '' : 's'} to Zenith`
+    if (this.watch) {
+      return cardFrame(base({ face: 'happy', weather: 'none' }), 'Now say something calm,\nlike "Okay. I\'ve got this."', hint)
+    }
+    if (this.pending) return cardFrame(base({ face: 'worried' }), 'Tap to start a reset.', hint)
+    if (weather === 'stormy') {
+      return cardFrame(base(), 'Keep going...\ntell me more.', hint)
+    }
+    const prompts = [
+      'Tell me about the last\ntime work stressed you out.',
+      'Now vent about something\nannoying. A slow laptop?',
+      'Last one: what stresses\nyou about deadlines?',
+    ]
+    return cardFrame(base(), prompts[Math.min(n, prompts.length - 1)], hint)
   }
 
   private changed(): void {

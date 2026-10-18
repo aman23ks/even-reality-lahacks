@@ -51,12 +51,16 @@ export class MoodEngine {
   spike(now = Date.now()): { kind: 'storm' | 'fog'; since: number } | null {
     const snap = this.snapshot(now)
     const recent = this.samples.filter(
-      (x) => now - x.t <= this.timings().triggerWindowMs && x.label !== 'clear' && x.intensity >= MOOD.negativeIntensity,
+      (x) => now - x.t <= this.timings().triggerWindowMs && x.label !== 'clear' && x.intensity >= (this.timings().negativeIntensity ?? MOOD.negativeIntensity),
     )
-    if (recent.length < MOOD.triggerMinUtterances) return null
+    if (recent.length < this.timings().triggerMinUtterances) return null
+    if (this.timings().instantTrigger) {
+      const last = recent[recent.length - 1]
+      return { kind: last.label === 'fog' ? 'fog' : 'storm', since: last.t }
+    }
     const kind = snap.stress >= snap.low ? 'storm' : 'fog'
     const score = kind === 'storm' ? snap.stress : snap.low
-    if (score < MOOD.triggerScore) return null
+    if (score < this.timings().triggerScore) return null
     return { kind, since: recent[0].t }
   }
 

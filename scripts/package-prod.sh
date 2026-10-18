@@ -37,7 +37,8 @@ fs.writeFileSync(p, JSON.stringify(a,null,2)+'\n');
 " "$URL"
 
 echo "${B}Building…${N}"
-VITE_BACKEND_URL="$URL" VITE_APP_KEY="$KEY" npm run build --silent
+# Fresh installs of the judging build start in judge mode (JUDGE_DEFAULT=0 to turn off)
+VITE_JUDGE_DEFAULT="${JUDGE_DEFAULT:-1}" VITE_BACKEND_URL="$URL" VITE_APP_KEY="$KEY" npm run build --silent
 npx --no-install evenhub pack app.json dist -o AuraPet.ehpk
 
 echo

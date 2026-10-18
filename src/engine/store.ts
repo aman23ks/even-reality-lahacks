@@ -4,7 +4,7 @@
 
 import type { Storage } from '../platform/glasses'
 import type { PersistedData, StageId } from '../types'
-import { STAGES } from '../config'
+import { JUDGE_STAGES, STAGES, type StageDef } from '../config'
 import { emptyStats } from './resets'
 
 const KEY = 'aurapet_v2'
@@ -15,6 +15,8 @@ export function freshData(): PersistedData {
     version: 1,
     onboarded: false,
     demoMode: false,
+    // Builds packaged for judging start in judge mode on a fresh install
+    judgeMode: import.meta.env.VITE_JUDGE_DEFAULT === '1',
     blankLens: false,
     pet: { name: 'Mochi', hatched: false, recoveries: 0, sunlight: 0, createdAt: Date.now() },
     timeline: [],
@@ -46,6 +48,7 @@ export class Store {
     } catch {
       // corrupt → start fresh
     }
+    useJudgeStages(this.data.judgeMode)
   }
 
   /** Debounced save */
@@ -63,24 +66,36 @@ export class Store {
 
   async reset(): Promise<void> {
     this.data = freshData()
+    useJudgeStages(this.data.judgeMode)
     await this.flush()
   }
+}
+
+let stages: StageDef[] = STAGES
+
+/** Judge mode swaps in the short evolution ladder (1 / 2 / 3 recoveries) */
+export function useJudgeStages(on: boolean): void {
+  stages = on ? JUDGE_STAGES : STAGES
+}
+
+export function currentStages(): StageDef[] {
+  return stages
 }
 
 export function stageFor(recoveries: number, hatched: boolean): StageId {
   if (!hatched) return 'egg'
   let stage: StageId = 'sprout'
-  for (const s of STAGES) if (recoveries >= s.at) stage = s.id
+  for (const s of stages) if (recoveries >= s.at) stage = s.id
   return stage
 }
 
 export function nextStage(recoveries: number): { label: string; at: number } | null {
-  const next = STAGES.find((s) => s.at > recoveries)
+  const next = stages.find((s) => s.at > recoveries)
   return next ? { label: next.label, at: next.at } : null
 }
 
 export function stageLabel(id: StageId): string {
-  return id === 'egg' ? 'Egg' : STAGES.find((s) => s.id === id)?.label ?? id
+  return id === 'egg' ? 'Egg' : stages.find((s) => s.id === id)?.label ?? id
 }
 
 /** Running median helper for per-user baselines */

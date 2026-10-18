@@ -9,8 +9,7 @@ import type { AudioInput } from '../audio/input'
 import type { HudRenderer, MirrorFrame } from '../hud/renderer'
 import { drawMirror } from '../hud/mirrorCanvas'
 import { RESETS, successRate } from '../engine/resets'
-import { nextStage, stageLabel } from '../engine/store'
-import { STAGES } from '../config'
+import { currentStages, nextStage, stageLabel } from '../engine/store'
 import { diag } from '../diagnostics'
 import type { ResetId } from '../types'
 
@@ -137,6 +136,12 @@ export function mountPhoneUi(d: PhoneDeps): void {
     </div>
 
     <div class="card">
+      <h2>Judge mode</h2>
+      <div class="sub" style="margin-bottom:10px">A guided 2-minute run for someone trying G2 for the first time: the lens tells them what to say, and Mochi reaches <b>Zenith in 3 bounce-backs</b>.</div>
+      <button class="btn primary" id="judgeBtn">Start judge demo</button>
+    </div>
+
+    <div class="card">
       <h2>Demo shortcuts</h2>
       <div class="sub" style="margin-bottom:10px">Sets the recovery count so your <b>next real recovery</b> (nudge → reset → calm down) triggers the evolution. Turn on Demo mode too.</div>
       <div class="row" style="gap:8px;flex-wrap:wrap">
@@ -215,6 +220,7 @@ export function mountPhoneUi(d: PhoneDeps): void {
     }
   })
   $('previewEvo').onclick = () => d.aura.previewEvolution()
+  $('judgeBtn').onclick = () => (d.aura.judgeMode ? d.aura.stopJudgeDemo() : d.aura.startJudgeDemo())
 
   setupTimelineHover()
   renderOnboarding(d)
@@ -231,9 +237,10 @@ export function mountPhoneUi(d: PhoneDeps): void {
       chip(d.audio.source !== 'none', micLabel(d.audio.source)),
       chip(be.online, be.online ? (be.llm ? `AI: ${be.llm.split(':')[0]}` : 'AI: keyword mode') : 'Backend offline'),
       chip(d.aura.speechReady, be.stt ? `Speech: ${be.stt.split(':')[0]}` : d.aura.speechReady ? 'Speech: phone' : 'Speech: not set up'),
-      chip(data.demoMode, data.demoMode ? 'Demo mode' : 'Everyday mode'),
+      chip(data.demoMode || data.judgeMode, data.judgeMode ? 'Judge mode' : data.demoMode ? 'Demo mode' : 'Everyday mode'),
     ].join('')
     $('micBtn').style.display = d.audio.source === 'none' ? '' : 'none'
+    $('judgeBtn').textContent = d.aura.judgeMode ? 'Stop judge demo' : 'Start judge demo'
 
     const tapBtn = $('tapBtn')
     tapBtn.style.display = s.phase === 'nudged' || (s.phase === 'idle' && s.pending) ? '' : 'none'
@@ -516,7 +523,7 @@ function renderCalms(d: PhoneDeps): void {
 
 function renderStages(d: PhoneDeps, s: AuraSnapshot): void {
   const n = d.store.data.pet.recoveries
-  document.getElementById('stages')!.innerHTML = STAGES.map(
+  document.getElementById('stages')!.innerHTML = currentStages().map(
     (st) => `<div class="stage ${s.stage === st.id ? 'cur' : n >= st.at ? 'done' : ''}"><b>${st.label}</b><br>${st.at}</div>`,
   ).join('')
   const next = nextStage(n)

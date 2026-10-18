@@ -64,6 +64,8 @@ export interface PersistedData {
   version: 1
   onboarded: boolean
   demoMode: boolean
+  /** guided 2-minute demo for judges: 3 recoveries to Zenith, on-lens prompts */
+  judgeMode: boolean
   /** opt-in: lens goes fully blank when nothing is happening (default shows the tiny pet) */
   blankLens: boolean
   pet: PetState
