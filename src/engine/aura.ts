@@ -1,5 +1,5 @@
 /**
- * src/engine/aura.ts — AuraPet's brain.
+ * src/engine/aura.ts — Compassion Coach's brain.
  *
  *   listen → detect a sustained spiral → nudge → one verified reset → bloom → watch for real recovery → grow
  *
@@ -55,7 +55,7 @@ export interface AuraSnapshot {
 
 const MAX_BASELINE = 40
 
-/** Item IDs for AuraPet's entries in the G2 long-press menu */
+/** Item IDs for Compassion Coach's entries in the G2 long-press menu */
 const MENU = { voice: 1, judge: 2, exitJudge: 3 }
 
 type NoticeKind = 'repair' | 'room' | 'kind' | 'forecast' | 'badge' | 'pb' | 'self'
@@ -154,7 +154,7 @@ export class Aura {
     this.applyVoiceprint()
 
     glasses.onInput((t) => this.onInput(t))
-    // Entries in the G2 long-press menu while AuraPet is open
+    // Entries in the G2 long-press menu while Compassion Coach is open
     hud.menuItems = [
       { itemID: MENU.voice, itemName: 'Learn my voice' },
       { itemID: MENU.judge, itemName: 'Start judge tour' },
@@ -1372,7 +1372,7 @@ export class Aura {
       this.judgeDone.has('room') ? 'room' : '',
     ].filter(Boolean)
     const worn = this.accessories()
-    const lines = ["ZENITH! That's AuraPet."]
+    const lines = ["ZENITH! Compassion Coach"]
     if (about) lines.push(`Storms: ${about}`)
     if (extras.length) lines.push(`Did: ${extras.join(', ')}`)
     if (worn.length) lines.push(`Earned: ${worn.join(', ')}`)

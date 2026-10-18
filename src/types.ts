@@ -1,5 +1,5 @@
 /**
- * src/types.ts — Shared types for AuraPet
+ * src/types.ts — Shared types for Compassion Coach
  */
 
 /** Per-utterance classification from the backend */

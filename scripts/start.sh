@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AuraPet one-command start: servers → IP → network check → QR → mirror → live connection monitor.
+# Compassion Coach one-command start: servers → IP → network check → QR → mirror → live connection monitor.
 #   npm run start:demo        (Ctrl+C stops the monitor only; servers keep running)
 #   npm run stop              (stops the servers)
 set -uo pipefail

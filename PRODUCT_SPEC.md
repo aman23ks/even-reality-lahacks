@@ -1,8 +1,8 @@
-# AuraPet — Product Spec (LA Hacks 2026, Even Realities track)
+# Compassion Coach — Product Spec (LA Hacks 2026, Even Realities track)
 
 ## 1. One-line pitch
 
-**AuraPet notices when a conversation is winding you up, and helps you come back down before the bad mood takes over your day. It lives quietly in your G2 lenses as a small creature that grows every time you recover.**
+**Compassion Coach notices when a conversation is winding you up, and helps you come back down before the bad mood takes over your day. It lives quietly in your G2 lenses as a small creature that grows every time you recover.**
 
 > "We don't reward you for being happy. We reward you for coming back."
 
@@ -14,7 +14,7 @@ Smart glasses can help. They're already on your face, they hear what you say, an
 
 ## 3. Product principles
 
-1. **Stay quiet by default.** The lenses are empty or close to empty most of the time. AuraPet only speaks up when it matters.
+1. **Stay quiet by default.** The lenses are empty or close to empty most of the time. Compassion Coach only speaks up when it matters.
 2. **Recovery is the goal, not happiness.** Feeling bad is never punished and never farmed for points. Coming back from it is what gets rewarded.
 3. **Rewards must be earned.** Nothing finishes on a tap. Every reset is confirmed by your voice or your head movement.
 4. **Only your voice counts.** Other people's speech is ignored, and raw audio and transcripts never leave the session.
@@ -31,7 +31,7 @@ Smart glasses can help. They're already on your face, they hear what you say, an
 ```
 
 ### Step 0: Onboarding (phone, about 60 seconds, once)
-1. Welcome: "AuraPet helps you bounce back from stressful moments."
+1. Welcome: "Compassion Coach helps you bounce back from stressful moments."
 2. Privacy: "Only your voice is analyzed. Audio and words are never stored, only mood labels." The user taps Allow to grant mic access.
 3. Voice check: read one sentence aloud. This confirms the glasses mic picks you up as `Self` and saves your baseline pitch and energy for prosody.
 4. Hatch: an egg appears on the lenses, and it hatches when you say its name out loud. That teaches the user, in the first minute, that **your voice is the controller**.
@@ -39,7 +39,7 @@ Smart glasses can help. They're already on your face, they hear what you say, an
 ### Step 1: Ambient mode (most of the day)
 - **Lenses:** a tiny pet glyph in the corner at low brightness plus a one-word "weather" (`clear` / `cloudy` / `stormy`). That's all.
 - Tap the temple to show the pet card for 5 seconds. Double-tap to exit.
-- AuraPet listens in the background (see §7). Only utterances tagged `speakerRole === Self` are processed.
+- Compassion Coach listens in the background (see §7). Only utterances tagged `speakerRole === Self` are processed.
 
 ### Step 2: Detect, with a mood engine instead of frame-by-frame reactions
 - Audio is split into **utterances** (stretches of speech that end with a pause), not 60 fps frames.
@@ -127,7 +127,7 @@ Every reset can be done in 30–60 seconds without looking at a phone, and **eac
 
 Even Hub apps are WebViews inside the Even App. Only one app owns the lens at a time.
 
-**Recommended approach: "ambient foreground."** AuraPet stays the active glasses app but shows almost nothing (corner glyph, low brightness). To the user this *feels* like a background app, because the lens is clear until it matters. This is fully under our control and is also the right UX.
+**Recommended approach: "ambient foreground."** Compassion Coach stays the active glasses app but shows almost nothing (corner glyph, low brightness). To the user this *feels* like a background app, because the lens is clear until it matters. This is fully under our control and is also the right UX.
 
 What the SDK gives us to support this:
 - `FOREGROUND_EXIT_EVENT` / `FOREGROUND_ENTER_EVENT`: pause and resume cleanly, and save state on exit.
@@ -176,7 +176,7 @@ There are no menus to scroll through, and every screen can be read in under a se
 ## 10. Demo script (3 minutes)
 
 1. **(20s) Hook.** "Ever had a conversation make your day worse? You don't notice the spiral until it's too late."
-2. **(30s) Ambient.** Show the lens: almost nothing there. "AuraPet stays out of your way."
+2. **(30s) Ambient.** Show the lens: almost nothing there. "Compassion Coach stays out of your way."
 3. **(40s) Storm.** A teammate plays the stressed coworker. The presenter vents: "This deadline is impossible, nothing works, I'm so behind." The pet's weather turns stormy and a nudge appears on the lens (mirrored on screen).
 4. **(15s) Ignoring others.** The teammate talks angrily and nothing changes. "It only listens to me. The glasses tag my voice."
 5. **(40s) Reset.** Tap, then "Name it": "I'm overwhelmed because I'm scared we won't finish." Verified, the storm becomes a bloom. Then, in a calmer voice: "OK, one thing I can do is cut the breeding feature." The weather clears.

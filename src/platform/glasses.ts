@@ -85,7 +85,7 @@ export class Glasses {
   onLifecycle(fn: Fn<Lifecycle>): void {
     this.lifecycleFns.push(fn)
   }
-  /** An item from AuraPet's entries in the G2 long-press menu was chosen */
+  /** An item from Compassion Coach's entries in the G2 long-press menu was chosen */
   onMenu(fn: Fn<number>): void {
     this.menuFns.push(fn)
   }
@@ -183,7 +183,7 @@ export class Glasses {
   }
 
   private input(type: InputType): void {
-    // A touchpad press means AuraPet owns the lens, whatever the last lifecycle event said
+    // A touchpad press means Compassion Coach owns the lens, whatever the last lifecycle event said
     if (!this.inForeground) {
       this.inForeground = true
       diag.inForeground = true

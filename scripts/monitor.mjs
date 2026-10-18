@@ -41,7 +41,7 @@ function handle(r) {
     if (isPhone) {
       phoneSeen = true
       const device = /iPhone/.test(r.userAgent) ? 'iPhone' : /Android/.test(r.userAgent) ? 'Android' : 'phone'
-      say('📱', G, `${B}${device} opened AuraPet${N}${G} — the phone can reach the laptop`)
+      say('📱', G, `${B}${device} opened Compassion Coach${N}${G} — the phone can reach the laptop`)
     } else {
       say('💻', D, 'a laptop browser tab opened the app (fine for testing, ignored below)')
     }
@@ -66,7 +66,7 @@ function handle(r) {
   if (r.startupPageResult === 0) once(inst, 'page', () => say('🖼 ', G, 'lens page created on the glasses'))
   else if (r.startupPageResult != null)
     once(inst, 'pagefail', () =>
-      say('⚠️ ', Y, `lens page returned ${r.startupPageResult} (another AuraPet copy may own the lens — force-quit the Even App)`),
+      say('⚠️ ', Y, `lens page returned ${r.startupPageResult} (another Compassion Coach copy may own the lens — force-quit the Even App)`),
     )
 
   if (r.audioSource === 'glasses') once(inst, 'mic', () => say('🎙 ', G, `glasses mic streaming${r.sampleRateEstimate ? ` (${r.sampleRateEstimate} Hz)` : ''}`))
@@ -81,14 +81,14 @@ function handle(r) {
 
   if (r.backend?.online && !r.backend.stt && !r.speechRecognitionAvailable)
     once(inst, 'nostt', () =>
-      say('✗ ', R, 'no speech-to-text: AuraPet hears you but can\'t understand words. Add GROQ_API_KEY to .env, then npm run start:demo'),
+      say('✗ ', R, 'no speech-to-text: Compassion Coach hears you but can\'t understand words. Add GROQ_API_KEY to .env, then npm run start:demo'),
     )
   if (r.backend?.stt) once(inst, 'stt', () => say('📝', G, 'speech-to-text ready (glasses audio → words → Claude)'))
   if (r.utterances > 0) once(inst, 'utt', () => say('💬', G, 'heard you speak'))
   if (r.imuFrames > 0) once(inst, 'imu', () => say('🧭', G, 'head-tilt sensor reporting ("Look up" reset enabled)'))
   if (r.lastImageResult === 'success') once(inst, 'img', () => say('🐣', G, `pet image drawn on the lens (${r.imageMode})`))
   else if (r.lastImageResult) once(inst, 'imgfail', () => say('⚠️ ', Y, `pet image failed: ${r.lastImageResult}`))
-  if ((a.framesInBackground || 0) > 0) once(inst, 'bg', () => say('🌙', G, 'audio keeps flowing while AuraPet is in the background'))
+  if ((a.framesInBackground || 0) > 0) once(inst, 'bg', () => say('🌙', G, 'audio keeps flowing while Compassion Coach is in the background'))
 
   for (const e of r.events || []) {
     if (e.kind === 'voice_check_done')

@@ -20,7 +20,7 @@ export interface PhoneDeps {
   audio: AudioInput
   hud: HudRenderer
   glassesConnected: () => boolean
-  /** false after the glasses report AuraPet left the lens (e.g. exit dialog, another app opened) */
+  /** false after the glasses report Compassion Coach left the lens (e.g. exit dialog, another app opened) */
   lensActive: () => boolean
   backend: () => { online: boolean; stt: string | null; llm: string | null }
 }
@@ -88,7 +88,7 @@ export function mountPhoneUi(d: PhoneDeps): void {
     <div id="setupBanner"></div>
     <div class="card">
       <div class="row between">
-        <div><h1 id="title">AuraPet</h1><div class="sub" id="subtitle"></div></div>
+        <div><h1 id="title">Compassion Coach</h1><div class="sub" id="subtitle"></div></div>
         <button class="btn" id="tapBtn" style="display:none">Open reset</button>
       </div>
       <div class="chips" id="chips"></div>
@@ -180,7 +180,7 @@ export function mountPhoneUi(d: PhoneDeps): void {
       <div style="margin-top:12px"><div class="sub" style="margin-bottom:6px">Try it by typing (same pipeline as speech). Start a line with <b>them:</b> to play the other person in a conversation.</div>
         <div class="row"><input type="text" id="typed" placeholder="you: this deadline is impossible · them: start with &quot;them:&quot;"><button class="btn" id="send">Send</button></div>
       </div>
-      <div class="toggle" style="margin-top:6px"><div><div>Voice fingerprint</div><div class="sub" id="voiceSub">Teaches AuraPet how the glasses hear <i>your</i> voice, so only you count. Start it here (on the glasses, a long press opens the G2 system menu).</div></div><button class="btn" id="voiceBtn">Start</button></div>
+      <div class="toggle" style="margin-top:6px"><div><div>Voice fingerprint</div><div class="sub" id="voiceSub">Teaches Compassion Coach how the glasses hear <i>your</i> voice, so only you count. Start it here (on the glasses, a long press opens the G2 system menu).</div></div><button class="btn" id="voiceBtn">Start</button></div>
       <div class="row" style="margin-top:12px;gap:8px">
         <button class="btn" id="micBtn">Start microphone</button>
         <button class="btn" id="resetData">Reset all data</button>
@@ -284,13 +284,13 @@ export function mountPhoneUi(d: PhoneDeps): void {
 
     $('setupBanner').innerHTML =
       d.glassesConnected() && !d.lensActive()
-        ? `<div class="banner"><b>AuraPet isn't on your lens right now.</b><div class="sub" style="margin-top:4px">It's still listening here. To bring it back, open <b>AuraPet</b> from the glasses menu (or tap the temple). Tip: double-tap on the main screen opens the exit dialog.</div></div>`
+        ? `<div class="banner"><b>Compassion Coach isn't on your lens right now.</b><div class="sub" style="margin-top:4px">It's still listening here. To bring it back, open <b>Compassion Coach</b> from the glasses menu (or tap the temple). Tip: double-tap on the main screen opens the exit dialog.</div></div>`
         : be.online && !d.aura.speechReady
-        ? `<div class="banner"><b>AuraPet can hear you but can't understand words yet.</b><div class="sub" style="margin-top:4px">This phone has no built-in speech recognition. Add <code>GROQ_API_KEY</code> (free at console.groq.com) to <code>.env</code> on the laptop, then run <code>npm run start:demo</code>.</div></div>`
+        ? `<div class="banner"><b>Compassion Coach can hear you but can't understand words yet.</b><div class="sub" style="margin-top:4px">This phone has no built-in speech recognition. Add <code>GROQ_API_KEY</code> (free at console.groq.com) to <code>.env</code> on the laptop, then run <code>npm run start:demo</code>.</div></div>`
         : ''
     const vp = data.voiceprint
     $('voiceSub').innerHTML = vp
-      ? `<b>Voiceprint saved</b> (${vp.samples} sentences, ~${Math.round(vp.pitch)} Hz, match needed ${Math.round(vp.threshold * 100)}%). Only your voice feeds AuraPet; it's off in judge mode. Numbers only, never audio. <a href="#" id="clearVp" style="color:var(--text2)">Remove</a>`
+      ? `<b>Voiceprint saved</b> (${vp.samples} sentences, ~${Math.round(vp.pitch)} Hz, match needed ${Math.round(vp.threshold * 100)}%). Only your voice feeds Compassion Coach; it's off in judge mode. Numbers only, never audio. <a href="#" id="clearVp" style="color:var(--text2)">Remove</a>`
       : 'Read 3 sentences to create your <b>voiceprint</b>, so only your voice counts (also on the phone mic). Numbers only, never audio.'
     const clear = document.getElementById('clearVp')
     if (clear) clear.onclick = (e) => {
@@ -299,7 +299,7 @@ export function mountPhoneUi(d: PhoneDeps): void {
     }
     $('crisis').innerHTML =
       s.phase === 'crisis'
-        ? `<div class="banner"><b>You matter.</b><div class="sub" style="margin-top:4px">That sounded really heavy. AuraPet has paused its game. Please reach out to someone you trust, a friend, family member, or someone nearby, and let them know how you're feeling.</div></div>`
+        ? `<div class="banner"><b>You matter.</b><div class="sub" style="margin-top:4px">That sounded really heavy. Compassion Coach has paused its game. Please reach out to someone you trust, a friend, family member, or someone nearby, and let them know how you're feeling.</div></div>`
         : ''
 
     // Charts only redraw when data changes (or every 30s to advance "now"), so hover isn't interrupted
@@ -333,12 +333,12 @@ function renderOnboarding(d: PhoneDeps): void {
   let step = 0
   const steps = [
     () => `
-      <h1>Meet AuraPet</h1>
+      <h1>Meet Compassion Coach</h1>
       <p>A tiny companion on your G2 lenses. It notices when a conversation is winding you up, helps you come back down, and grows every time you do.</p>
       <button class="btn primary" data-next>Get started</button>`,
     () => `
       <h1>Only your voice. Nothing saved.</h1>
-      <p>AuraPet listens to <b>your</b> voice only. Other people are ignored. Audio and words are processed in the moment and never stored; only mood scores stay on this phone.</p>
+      <p>Compassion Coach listens to <b>your</b> voice only. Other people are ignored. Audio and words are processed in the moment and never stored; only mood scores stay on this phone.</p>
       <button class="btn primary" data-mic>Allow listening</button>`,
     () => `
       <h1>Name your companion</h1>
@@ -349,7 +349,7 @@ function renderOnboarding(d: PhoneDeps): void {
     () => `
       <h1>Hatch your egg</h1>
       <p>Look at your lenses and say <b>"Hi ${escapeHtml(d.store.data.pet.name)}"</b> out loud.</p>
-      <p class="sub">Your voice is the controller: AuraPet's resets are done by speaking, not tapping.</p>
+      <p class="sub">Your voice is the controller: Compassion Coach's resets are done by speaking, not tapping.</p>
       <div class="row" style="gap:8px"><button class="btn" data-skip>Type it instead</button></div>`,
   ]
   const draw = () => {
@@ -591,7 +591,7 @@ function renderPatterns(d: PhoneDeps): void {
   const f = d.aura.forecast()
   document.getElementById('forecastLine')!.textContent = f.line
     ? `🔮 Forecast: ${f.line}`
-    : '🔮 Forecast: a few more days of use and AuraPet will spot your patterns.'
+    : '🔮 Forecast: a few more days of use and Compassion Coach will spot your patterns.'
   const max = Math.max(1, ...f.topics.map(([, n]) => n))
   document.getElementById('topics')!.innerHTML = f.topics.length
     ? f.topics
@@ -608,7 +608,7 @@ function renderCalms(d: PhoneDeps): void {
   const ids = (Object.keys(RESETS) as ResetId[]).sort((a, b) => successRate(stats[b]) - successRate(stats[a]))
   const anyTried = ids.some((id) => stats[id].offered > 0)
   document.getElementById('calms')!.innerHTML =
-    (anyTried ? '' : '<div class="sub" style="margin-bottom:10px">AuraPet learns which resets actually bring you back, and offers those first.</div>') +
+    (anyTried ? '' : '<div class="sub" style="margin-bottom:10px">Compassion Coach learns which resets actually bring you back, and offers those first.</div>') +
     ids
       .map((id) => {
         const s = stats[id]

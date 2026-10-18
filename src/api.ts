@@ -1,5 +1,5 @@
 /**
- * src/api.ts — Backend client for AuraPet
+ * src/api.ts — Backend client for Compassion Coach
  */
 
 import type { ResetId, UtteranceResult } from './types'

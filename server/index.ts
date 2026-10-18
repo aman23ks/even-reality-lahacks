@@ -1,5 +1,5 @@
 /**
- * server/index.ts — AuraPet backend
+ * server/index.ts — Compassion Coach backend
  *
  *   POST /api/utterance   audio (WAV base64) or text → transcript + mood label (+ reset verification)
  *   POST /api/mirror      latest lens frame from the phone
@@ -483,7 +483,7 @@ app.get('/api/diag/recent', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   const p = provider()
-  console.log(`AuraPet server on http://0.0.0.0:${PORT}`)
+  console.log(`Compassion Coach server on http://0.0.0.0:${PORT}`)
   console.log(`Live mood labels: ${liveName() ?? 'keyword heuristics (no AI key)'}`)
   console.log(`Reset checks:     ${verifyName() ?? 'keyword heuristics (no AI key)'}`)
   console.log(`Speech-to-text: ${p ? `${p.name}:${p.sttModel}` : 'phone on-device speech recognition (no Groq/OpenAI key)'}`)

@@ -1,8 +1,8 @@
-# AuraPet: end-to-end test (speak it)
+# Compassion Coach: end-to-end test (speak it)
 
 About 20 minutes. Glasses on, phone on the same Wi-Fi as the laptop, a teammate nearby.
 
-**Golden rule:** after every line, **stop and wait 3 seconds**. The pause tells AuraPet you've finished; transcription plus Claude take about 2.5s.
+**Golden rule:** after every line, **stop and wait 3 seconds**. The pause tells Compassion Coach you've finished; transcription plus Claude take about 2.5s.
 
 Demo-mode timers: 30s cooldown between resets · 3-minute window for a recovery to count.
 
@@ -18,8 +18,8 @@ Open the projector view: **http://192.168.1.47:5173/mirror.html**
 
 **Phone:**
 1. **Force-quit the Even App**, reopen it, and wait for the glasses to show *connected*.
-2. **Even Hub → Scan QR** → scan the AuraPet QR (`.aurapet/qr.png`, or run `npm run qr`).
-3. Fresh start: in AuraPet on the phone, **Settings → Reset all data**.
+2. **Even Hub → Scan QR** → scan the Compassion Coach QR (`.aurapet/qr.png`, or run `npm run qr`).
+3. Fresh start: in Compassion Coach on the phone, **Settings → Reset all data**.
 
 ✅ Monitor shows: 📱 iPhone opened · 👓 bridge connected · 🎙 glasses mic · 📝 speech-to-text ready
 
@@ -137,7 +137,7 @@ Then fast and loud, in one breath:
 
 ## 13. Background
 
-- Open another app on the glasses for 20s while talking normally, then return to AuraPet → the lens redraws. Monitor may show 🌙 *audio keeps flowing in the background*.
+- Open another app on the glasses for 20s while talking normally, then return to Compassion Coach → the lens redraws. Monitor may show 🌙 *audio keeps flowing in the background*.
 - Lock the phone for 30s → unlock → still running.
 - Force-quit the Even App → reopen → rescan → pet keeps its **stage + recoveries**.
 

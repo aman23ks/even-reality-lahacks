@@ -47,7 +47,7 @@ export const diag = {
 export function diagEvent(kind: string, detail?: unknown): void {
   diag.events.push({ t: Date.now(), kind, detail })
   if (diag.events.length > 40) diag.events.shift()
-  console.log('[AuraPet]', kind, detail ?? '')
+  console.log('[Compassion Coach]', kind, detail ?? '')
 }
 
 export function startDiagnostics(): void {

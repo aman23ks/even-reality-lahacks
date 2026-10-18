@@ -41,7 +41,7 @@ export class HudRenderer {
   private lastMirrorPost = 0
   private mirrorTimer?: ReturnType<typeof setTimeout>
   caption = ''
-  /** AuraPet's entries in the G2 long-press menu (omitting them on rebuild would clear the menu) */
+  /** Compassion Coach's entries in the G2 long-press menu (omitting them on rebuild would clear the menu) */
   menuItems: Array<{ itemID: number; itemName: string }> = []
 
   private menu(): MenuContainerProperty | undefined {
@@ -106,7 +106,7 @@ export class HudRenderer {
     this.publishMirror(frame, sprite)
 
     const bridge = this.glasses.bridge
-    // Always draw: the host can report "background" while AuraPet is still on the lens (inputs keep
+    // Always draw: the host can report "background" while Compassion Coach is still on the lens (inputs keep
     // arriving), and if we truly aren't on screen the host simply ignores the update.
     if (!bridge) return
 

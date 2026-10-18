@@ -1,5 +1,5 @@
 /**
- * main.ts — AuraPet entry point (runs in the Even App WebView on the phone, or a desktop browser for preview)
+ * main.ts — Compassion Coach entry point (runs in the Even App WebView on the phone, or a desktop browser for preview)
  *
  * Boot order matters on G2: bridge → first lens page → mic + IMU (the glasses mic only streams once a page exists).
  */

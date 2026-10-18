@@ -39,15 +39,15 @@ fs.writeFileSync(p, JSON.stringify(a,null,2)+'\n');
 echo "${B}Building…${N}"
 # Judge mode is off by default; JUDGE_DEFAULT=1 makes fresh installs start in it
 VITE_JUDGE_DEFAULT="${JUDGE_DEFAULT:-0}" VITE_BACKEND_URL="$URL" VITE_APP_KEY="$KEY" npm run build --silent
-npx --no-install evenhub pack app.json dist -o AuraPet.ehpk
+npx --no-install evenhub pack app.json dist -o CompassionCoach.ehpk
 
 echo
-echo "${G}${B}Done:${N} AuraPet.ehpk  ($(du -h AuraPet.ehpk | cut -f1))"
+echo "${G}${B}Done:${N} CompassionCoach.ehpk  ($(du -h CompassionCoach.ehpk | cut -f1))"
 cat <<EOF
 
 ${B}Next${N}
   1. Render dashboard → aurapet → Environment → make sure ${B}APP_KEY${N} = the PROD_APP_KEY in .env
-  2. hub.evenrealities.com → your app → upload ${B}AuraPet.ehpk${N} as a ${B}Beta${N} build
+  2. hub.evenrealities.com → your app → upload ${B}CompassionCoach.ehpk${N} as a ${B}Beta${N} build
   3. Install the Beta on a phone + G2 and run the end-to-end test
   4. Projector: ${B}$URL/mirror.html${N}
 EOF

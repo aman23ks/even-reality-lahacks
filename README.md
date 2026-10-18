@@ -1,8 +1,8 @@
-# AuraPet: bounce back, on your G2
+# Compassion Coach: bounce back, on your G2
 
 > LA Hacks 2026 · Even Realities track
 
-**AuraPet notices when a conversation is winding you up and helps you come back down before the mood takes over your day.** It lives quietly in your G2 lenses as a small creature that grows every time you recover.
+**Compassion Coach notices when a conversation is winding you up and helps you come back down before the mood takes over your day.** It lives quietly in your G2 lenses as a small creature that grows every time you recover.
 
 > "We don't reward you for being happy. We reward you for coming back."
 
@@ -24,7 +24,7 @@ listen (your voice only) → notice a sustained spiral → nudge on the lens →
 | **Recovery** | A reset only counts as a recovery when your mood actually clears afterwards. The bounce-back time is recorded. |
 | **Evolution** | Egg → Sprout → Wisp (3) → Guardian (8) → Zenith (15 recoveries) |
 | **Learns what calms you** | Offers the resets that have worked for you most often first. |
-| **Post-conversation debrief** | When the glasses hear you *and* someone else, AuraPet holds every nudge (nobody talks to their glasses mid-argument). When everyone goes quiet and it got tense, it offers: *"That got tense. Tap when you're free for 30 seconds."* Calm conversations get nothing. |
+| **Post-conversation debrief** | When the glasses hear you *and* someone else, Compassion Coach holds every nudge (nobody talks to their glasses mid-argument). When everyone goes quiet and it got tense, it offers: *"That got tense. Tap when you're free for 30 seconds."* Calm conversations get nothing. |
 | **Repair ("oops")** | Say something sharp *to someone* ("whatever, do it yourself") and the lens offers: *"That came out sharp. Repair it?"* Apologise within 45s and it counts as a bounce-back. Complaining about things never triggers it. |
 | **Read the room** | When the person you're talking to sounds stressed, a private cue: *"They sound stressed. Maybe ask how they're doing."* Checking on them is noticed. Their words are never shown or stored, only their mood. |
 | **Kindness feeds Mochi** | Thanking, praising or encouraging someone makes Mochi glow: *"+1 kindness (3 today)"*. |
@@ -50,7 +50,7 @@ Privacy: audio and transcripts are processed in memory and never stored. Only mo
 | Judge tour | Start reset (when nudged) | Skip step | Restart (at Zenith) | *(G2 system menu)* |
 | Bloom / evolution / support | Close | — | Close | — |
 
-**Hands-free and menu controls** (while AuraPet is open):
+**Hands-free and menu controls** (while Compassion Coach is open):
 - Say **"Mochi, learn my voice"** → voice fingerprint · **"start the tour"** → judge tour · **"stop the tour"** → exit it
 - **Long-press** (G2 menu) also lists **Learn my voice · Start judge tour · Exit judge tour**
 
@@ -73,11 +73,11 @@ No glasses? Open `http://localhost:5173` in a browser and use **"Try it by typin
 
 ## Install & run on G2 (testers / judges)
 
-**Even Hub Beta (no setup):** install **AuraPet** from Even Hub on a phone paired with G2, and open it from the glasses menu. It talks to the hosted backend; testers need **no accounts or API keys**.
+**Even Hub Beta (no setup):** install **Compassion Coach** from Even Hub on a phone paired with G2, and open it from the glasses menu. It talks to the hosted backend; testers need **no accounts or API keys**.
 
-1. Phone: Even App → Even Hub → **AuraPet** → install the Beta build, then open it.
+1. Phone: Even App → Even Hub → **Compassion Coach** → install the Beta build, then open it.
 2. On the phone, follow the 4-step onboarding, then say **"Hi Mochi"** to hatch.
-3. To start the judge tour from the glasses: **tap** (pet card), then **swipe**. Voice check: phone → Settings. (A 1-second long-press opens the G2 system menu, where Aura Pet is launched from.)
+3. To start the judge tour from the glasses: **tap** (pet card), then **swipe**. Voice check: phone → Settings. (A 1-second long-press opens the G2 system menu, where Compassion Coach is launched from.)
 4. Phone → Settings → **Demo mode** (short timers). **Demo shortcuts → "Next → Wisp"** lets the next real recovery trigger an evolution.
 5. Vent two stressed sentences → *Storm brewing* → tap → answer the reset out loud → calm down → recovery.
 
@@ -88,8 +88,8 @@ Projector view of the wearer's lens: `https://<backend>/mirror.html`.
 The phone app ships inside the `.ehpk`; only the backend is hosted (it holds the API keys).
 
 1. **Backend on Render:** render.com → **New → Blueprint** → this repo, branch `aurapet-v2` (uses `render.yaml`). Enter `ANTHROPIC_API_KEY`, `GROQ_API_KEY` and `APP_KEY` when asked. You get a URL like `https://aurapet.onrender.com`. Free instances sleep after 15 min idle (~60s to wake); switch the plan to **Starter** for judging day.
-2. **Package:** `npm run package:prod -- https://aurapet.onrender.com`. This generates `PROD_APP_KEY` in `.env` (copy it into Render's `APP_KEY`), points `app.json`'s network whitelist at the URL, and writes `AuraPet.ehpk`.
-3. **Upload:** hub.evenrealities.com → your app → upload `AuraPet.ehpk` as a **Beta** build.
+2. **Package:** `npm run package:prod -- https://aurapet.onrender.com`. This generates `PROD_APP_KEY` in `.env` (copy it into Render's `APP_KEY`), points `app.json`'s network whitelist at the URL, and writes `CompassionCoach.ehpk`.
+3. **Upload:** hub.evenrealities.com → your app → upload `CompassionCoach.ehpk` as a **Beta** build.
 4. **Watch it live:** `npm run monitor -- https://aurapet.onrender.com`
 
 ## Code map
