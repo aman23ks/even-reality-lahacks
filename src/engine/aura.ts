@@ -53,6 +53,8 @@ export interface AuraSnapshot {
 
 const MAX_BASELINE = 40
 
+export type JudgeFeature = 'storm' | 'kind' | 'repair' | 'room' | 'convo' | 'pace' | 'forecast'
+
 const VOICE_LINES = [
   'Hi, this is my normal speaking voice.',
   "I'm testing my glasses at the hackathon today.",
@@ -93,6 +95,12 @@ export class Aura {
   private lastKindShownAt = 0
   private bloomText = ''
   private judgeStartedAt = 0
+  /**
+   * Judge tour: 0 storm → 1 kindness → 2 repair → 3 conversation (read the room + debrief) → 4 extra
+   * storm rounds until Zenith. Every step says on the lens what to do; swipe skips a step.
+   */
+  private judgeStep = 0
+  private judgeDone = new Set<JudgeFeature>()
   private sessionStartedAt = Date.now()
   private forecastShown = false
 
@@ -158,6 +166,8 @@ export class Aura {
     d.pet.recoveries = 0
     d.recoveries = []
     this.judgeStartedAt = Date.now()
+    this.judgeStep = 0
+    this.judgeDone.clear()
     this.notice = null
     this.repairWindow = null
     useJudgeStages(true)
@@ -351,6 +361,7 @@ export class Aura {
       if (fast && tense && this.phase === 'idle' && now - this.lastWhisperAt > this.timings().paceCooldownMs) {
         this.whisperUntil = now + 4000
         this.lastWhisperAt = now
+        this.judgeMark('pace')
         diagEvent('pace_whisper', { wps: wps.toFixed(1), baseWps: baseWps.toFixed(1) })
       }
       pushCapped(this.store.data.baseline.wps, wps)
@@ -391,6 +402,10 @@ export class Aura {
         }
         if (t === 'double_tap' && this.judgeMode) {
           if (stageFor(this.store.data.pet.recoveries, true) === 'zenith') this.startJudgeDemo()
+          break
+        }
+        if ((t === 'swipe_forward' || t === 'swipe_backward') && this.judgeMode && !this.pending) {
+          this.judgeSkip()
           break
         }
         if (t === 'double_tap') {
@@ -496,7 +511,7 @@ export class Aura {
     }
 
     // The "oops" moment: something sharp said TO someone (only when someone else is around)
-    const someoneAround = Boolean(this.convo) || now - this.lastOtherAt < 90_000
+    const someoneAround = Boolean(this.convo) || now - this.lastOtherAt < 90_000 || d.judgeMode
     if (
       soc.harsh &&
       someoneAround &&
@@ -531,6 +546,8 @@ export class Aura {
         this.notice = { kind: 'kind', title: `+1 kindness (${today} today)`, body: '', until: now + 4_000 }
       }
       this.lastKindShownAt = now
+      this.judgeMark('kind')
+      if (this.judgeStep === 1) this.judgeStep = 2
       diagEvent('kindness', soc.kind)
     }
   }
@@ -561,6 +578,7 @@ export class Aura {
       body: "Maybe ask how\nthey're doing.",
       until: now + 9_000,
     }
+    this.judgeMark('room')
     diagEvent('room_cue', label)
     this.changed()
   }
@@ -577,6 +595,8 @@ export class Aura {
     const evolved = stageFor(d.pet.recoveries, true) !== before
     if (evolved) this.celebrate = { kind: 'evolving', bounceMs: now - since }
     this.store.save()
+    this.judgeMark('repair')
+    if (this.judgeStep === 2) this.judgeStep = 3
     this.bloomText = 'Nice repair.\n\nThat takes guts.\nMochi grew.'
     this.setPhase('bloom', 5000)
     diagEvent('repair_done', { ms: now - since, evolved })
@@ -750,6 +770,7 @@ export class Aura {
         this.debrief = true
         this.nudgeShownAt = now
         this.setPhase('nudged')
+        this.judgeMark('convo')
         diagEvent('debrief', this.pending.kind)
       }
     }
@@ -757,6 +778,7 @@ export class Aura {
     // New spike → nudge (held while a conversation is going on)
     if (
       !this.convo &&
+      !this.repairWindow &&
       this.phase === 'idle' &&
       !this.pending &&
       !this.watch &&
@@ -793,6 +815,8 @@ export class Aura {
     this.store.save()
     const evolved = stageFor(d.pet.recoveries, true) !== before
     this.celebrate = { kind: evolved ? 'evolving' : 'cleared', bounceMs }
+    this.judgeMark('storm')
+    if (this.judgeStep === 0 || this.judgeStep === 3) this.judgeStep++
     diagEvent('recovered', { bounceMs, evolved })
   }
 
@@ -1068,10 +1092,38 @@ export class Aura {
     }
   }
 
+  private judgeMark(f: JudgeFeature): void {
+    if (this.store.data.judgeMode) this.judgeDone.add(f)
+  }
+
+  judgeSkip(): void {
+    if (!this.judgeMode) return
+    this.judgeStep = Math.min(4, this.judgeStep + 1)
+    this.notice = null
+    this.repairWindow = null
+    diagEvent('judge_skip', this.judgeStep)
+    this.changed()
+  }
+
+  /** For the phone's judge checklist */
+  judgeProgress(): { step: number; done: JudgeFeature[] } {
+    return { step: this.judgeStep, done: [...this.judgeDone] }
+  }
+
   private judgeSummary(): string {
     const topics = [...new Set(this.store.data.storms.filter((x) => x.t >= this.judgeStartedAt).map((x) => x.topic))].slice(0, 3)
-    const about = topics.length ? `Your storms: ${topics.join(', ')}.\n` : ''
-    return `That's AuraPet.\n${about}It helps you bounce back\nfrom stressful moments.`
+    this.judgeMark('forecast')
+    const about = topics.slice(0, 2).map((t) => t.slice(0, 10)).join(', ')
+    const extras = [
+      this.judgeDone.has('repair') ? 'repaired' : '',
+      this.judgeDone.has('kind') ? 'were kind' : '',
+      this.judgeDone.has('room') ? 'read the room' : '',
+    ].filter(Boolean)
+    const lines = ["ZENITH! That's AuraPet."]
+    if (about) lines.push(`Storms: ${about}`)
+    if (extras.length) lines.push(`You also: ${extras.slice(0, 2).join(', ')}${extras.length > 2 ? ',' : '.'}`)
+    if (extras.length > 2) lines.push(`${extras[2]}.`)
+    return lines.join('\n')
   }
 
   /** Judge mode idle screen: always tells the wearer exactly what to say next */
@@ -1097,15 +1149,19 @@ export class Aura {
     if (this.convo) {
       return cardFrame(base({ face: 'calm' }), "I'm listening.\nI'll wait until you're\ndone talking.", hint)
     }
-    if (weather === 'stormy') {
+    if (weather === 'stormy' && (this.judgeStep === 0 || this.judgeStep >= 4)) {
       return cardFrame(base(), 'Keep going...\ntell me more.', hint)
     }
-    const prompts = [
-      'Tell me about the last\ntime work stressed you out.',
-      'Now vent about something\nannoying. A slow laptop?',
-      'Last one: what stresses\nyou about deadlines?',
+    const step = this.judgeStep
+    const tour: Array<[string, string]> = [
+      ['1/4  Tell me about the last\ntime work stressed you out.', hint],
+      ['2/4  Thank someone nearby:\n"Thanks for showing me this."', 'swipe: skip'],
+      ['3/4  Snap at someone\n(jokingly): "Whatever,\ndo it yourself."', 'swipe: skip'],
+      ['4/4  Chat with the person\nnext to you about a\nstressful deadline.', 'alone? swipe: skip'],
+      ['One more: what stresses\nyou about deadlines?', hint],
     ]
-    return cardFrame(base(), prompts[Math.min(n, prompts.length - 1)], hint)
+    const [text, h] = tour[Math.min(step, tour.length - 1)]
+    return cardFrame(base(), text, h)
   }
 
   private changed(): void {

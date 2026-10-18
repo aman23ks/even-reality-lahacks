@@ -29,7 +29,7 @@ listen (your voice only) → notice a sustained spiral → nudge on the lens →
 | **Read the room** | When the person you're talking to sounds stressed, a private cue: *"They sound stressed. Maybe ask how they're doing."* Checking on them is noticed. Their words are never shown or stored, only their mood. |
 | **Kindness feeds Mochi** | Thanking, praising or encouraging someone makes Mochi glow: *"+1 kindness (3 today)"*. |
 | **Storm forecast** | Learns what your storms are about (topic tags only) and when they happen. On opening: *"'Deadline' keeps coming up in your storms."* At a risky hour: *"This hour often gets tense. One slow breath first?"* |
-| **Judge mode** | A guided 2-minute run for first-time wearers: the lens says what to say, one stressed sentence nudges, and Mochi reaches Zenith in 3 bounce-backs. On by default in the judging build. |
+| **Judge mode** | A guided ~3-minute tour for first-time wearers that shows every feature once and ends at Zenith (3 bounce-backs): **1/4** vent about work → reset → calm; **2/4** thank someone (kindness); **3/4** snap jokingly → apologise (repair); **4/4** tense chat with a teammate (read the room, silent mid-conversation, debrief after). Zenith screen summarises storm topics (forecast) and what you did. Swipe skips a step; the phone shows a live checklist. On by default in the judging build. |
 | **Slow-down whisper** | If you're talking much faster and louder than your usual, `slow down...` fades in on the lens. |
 | **Safety pause** | If something you say sounds really heavy, the game pauses and gently suggests reaching out to someone you trust. |
 | **Lens mirror** | `/mirror.html` shows exactly what the wearer sees, live, for the projector. |

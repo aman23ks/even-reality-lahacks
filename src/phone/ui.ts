@@ -145,8 +145,12 @@ export function mountPhoneUi(d: PhoneDeps): void {
 
     <div class="card">
       <h2>Judge mode</h2>
-      <div class="sub" style="margin-bottom:10px">A guided 2-minute run for someone trying G2 for the first time: the lens tells them what to say, and Mochi reaches <b>Zenith in 3 bounce-backs</b>.</div>
-      <button class="btn primary" id="judgeBtn">Start judge demo</button>
+      <div class="sub" style="margin-bottom:10px">A guided ~3-minute tour for someone trying G2 for the first time: the lens says what to do at each step, every feature shows up once, and Mochi reaches <b>Zenith in 3 bounce-backs</b>. Swipe on the glasses (or Skip step) to skip a step.</div>
+      <div class="row" style="gap:8px">
+        <button class="btn primary" id="judgeBtn">Start judge demo</button>
+        <button class="btn" id="judgeSkip" style="display:none">Skip step</button>
+      </div>
+      <div id="judgeList" style="margin-top:12px"></div>
     </div>
 
     <div class="card">
@@ -229,6 +233,7 @@ export function mountPhoneUi(d: PhoneDeps): void {
   })
   $('previewEvo').onclick = () => d.aura.previewEvolution()
   $('judgeBtn').onclick = () => (d.aura.judgeMode ? d.aura.stopJudgeDemo() : d.aura.startJudgeDemo())
+  $('judgeSkip').onclick = () => d.aura.judgeSkip()
 
   setupTimelineHover()
   renderOnboarding(d)
@@ -249,6 +254,8 @@ export function mountPhoneUi(d: PhoneDeps): void {
     ].join('')
     $('micBtn').style.display = d.audio.source === 'none' ? '' : 'none'
     $('judgeBtn').textContent = d.aura.judgeMode ? 'Stop judge demo' : 'Start judge demo'
+    $('judgeSkip').style.display = d.aura.judgeMode ? '' : 'none'
+    $('judgeList').innerHTML = d.aura.judgeMode ? judgeChecklist(d) : ''
 
     const tapBtn = $('tapBtn')
     tapBtn.style.display = s.phase === 'nudged' || (s.phase === 'idle' && s.pending) ? '' : 'none'
@@ -511,6 +518,24 @@ function renderBounce(d: PhoneDeps): void {
       })
       .join('') +
     `<text x="5" y="${H - 4}" fill="var(--muted)" font-size="9">oldest</text><text x="${W - 5}" y="${H - 4}" fill="var(--muted)" font-size="9" text-anchor="end">latest</text>`
+}
+
+const JUDGE_TOUR: Array<{ key: string; title: string; say: string }> = [
+  { key: 'storm', title: 'Storm → reset → bounce back', say: 'Vent about work stress, tap, answer the reset, then "Okay, I\'ve got this."' },
+  { key: 'kind', title: 'Kindness feeds Mochi', say: '"Thanks for showing me this."' },
+  { key: 'repair', title: 'Repair the sharp moment', say: '"Whatever, do it yourself." → "Sorry, that came out wrong."' },
+  { key: 'room', title: 'Read the room', say: 'Teammate: "I\'m so stressed about this deadline." → "Are you okay?"' },
+  { key: 'convo', title: 'Silent mid-conversation, debrief after', say: 'Tense back-and-forth with a teammate, then stop talking.' },
+  { key: 'pace', title: 'Slow-down whisper (optional)', say: 'Talk very fast and loud for one long sentence.' },
+  { key: 'forecast', title: 'Forecast + Zenith summary', say: 'Reached automatically at Zenith.' },
+]
+
+function judgeChecklist(d: PhoneDeps): string {
+  const { done } = d.aura.judgeProgress()
+  return JUDGE_TOUR.map((f) => {
+    const ok = done.includes(f.key as never)
+    return `<div class="reset-row"><div class="row between"><span>${ok ? '✅' : '⬜'} ${f.title}</span></div><div class="sub">${escapeHtml(f.say)}</div></div>`
+  }).join('')
 }
 
 function renderPatterns(d: PhoneDeps): void {
